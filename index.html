@@ -15,15 +15,29 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 h2 { font-size: 17px; font-weight: 600; color: #1a1a1a; margin-bottom: 16px; padding-top: 8px; }
 .section { margin-bottom: 16px; }
 label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; font-weight: 500; letter-spacing: 0.03em; }
-input[type="date"], input[type="text"], input[type="time"], textarea {
+input[type="date"], input[type="text"], input[type="time"], input[type="number"], textarea {
   width: 100%; padding: 13px 14px;
   border: 1px solid #ddd; border-radius: 12px;
   background: #fff; color: #1a1a1a;
   font-size: 16px; font-family: inherit;
   appearance: none; -webkit-appearance: none;
 }
-input:focus, textarea:focus { outline: none; border-color: #1D9E75; box-shadow: 0 0 0 2px rgba(29,158,117,0.15); }
+input:focus, textarea:focus, select:focus { outline: none; border-color: #1D9E75; box-shadow: 0 0 0 2px rgba(29,158,117,0.15); }
 textarea { resize: none; min-height: 80px; line-height: 1.6; }
+.select-wrap { position: relative; }
+select {
+  width: 100%; padding: 16px 44px 16px 16px;
+  border: 1px solid #ddd; border-radius: 12px;
+  background: #fff; color: #1a1a1a;
+  font-size: 16px; font-family: inherit;
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+}
+.arrow { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+.pills { display: flex; flex-direction: column; gap: 8px; }
+.pill { padding: 14px 18px; border-radius: 12px; border: 1px solid #ddd; background: #fff; color: #1a1a1a; font-size: 15px; cursor: pointer; text-align: left; width: 100%; }
+.pill.active { background: #E1F5EE; border-color: #1D9E75; color: #0F6E56; font-weight: 500; }
+.pill:active { opacity: 0.7; }
+.no-data { font-size: 13px; color: #999; padding: 8px 0; }
 .time-row { display: flex; align-items: center; gap: 8px; }
 .time-row input { flex: 1; }
 .time-sep { font-size: 15px; color: #666; flex-shrink: 0; }
@@ -55,9 +69,21 @@ textarea { resize: none; min-height: 80px; line-height: 1.6; }
 .toast.show { opacity: 1; }
 .toast.green { background: #1D9E75; }
 .toast.red { background: #e53935; }
+.settings-btn { position: fixed; bottom: 20px; right: 20px; background: #1D9E75; color: #fff; border: none; border-radius: 99px; padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; z-index: 100; }
+.settings-btn:active { opacity: 0.8; }
+.page { display: none; }
+.page.active { display: block; }
+.back-btn { background: none; border: none; color: #1D9E75; font-size: 15px; font-weight: 600; cursor: pointer; padding: 8px 0; margin-bottom: 12px; }
+.setting-item { display: flex; gap: 8px; margin-bottom: 8px; }
+.setting-item input { flex: 1; }
+.setting-item button { background: #fff; border: 1px solid #ddd; border-radius: 10px; width: 44px; height: 50px; cursor: pointer; color: #e53935; font-size: 18px; flex-shrink: 0; }
+.setting-item button:active { background: #fee; }
+.setting-list { margin-bottom: 12px; }
 </style>
 </head>
 <body>
+
+<div class="page active" id="mainPage">
 <div class="container">
   <h2>現場日報</h2>
   <div class="section">
@@ -66,11 +92,20 @@ textarea { resize: none; min-height: 80px; line-height: 1.6; }
   </div>
   <div class="section">
     <label>現場名</label>
-    <input type="text" id="siteName" placeholder="例：〇〇ビル新築工事">
+    <div class="select-wrap">
+      <select id="siteName">
+        <option value="">選択してください</option>
+      </select>
+      <svg class="arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M4 6l4 4 4-4" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
   </div>
   <div class="section">
-    <label>合番者</label>
-    <input type="text" id="partner" placeholder="例：田中 太郎">
+    <label>作業者</label>
+    <div class="pills" id="workerPills">
+      <div class="no-data">設定画面から作業者を登録してください</div>
+    </div>
   </div>
   <div class="section">
     <label>作業時間</label>
@@ -93,6 +128,8 @@ textarea { resize: none; min-height: 80px; line-height: 1.6; }
     <label>高速代（円）</label>
     <input type="number" id="highway" placeholder="例：1000">
   </div>
+  <div class="section">
+    <label>備考</label>
     <textarea id="notes" placeholder="特記事項があれば入力してください"></textarea>
   </div>
   <div class="action-row">
@@ -110,7 +147,36 @@ textarea { resize: none; min-height: 80px; line-height: 1.6; }
   <div class="history-title">過去の日報</div>
   <div id="historyList"><span style="font-size:13px;color:#999;">保存された日報はありません</span></div>
 </div>
+<button class="settings-btn" onclick="showSettings()">設定</button>
+</div>
+
+<div class="page" id="settingsPage">
+<div class="container">
+  <button class="back-btn" onclick="showMain()">← 日報に戻る</button>
+  <h2>設定</h2>
+
+  <div class="section">
+    <label>現場名を追加</label>
+    <div class="setting-item">
+      <input type="text" id="newSite" placeholder="例：〇〇ビル新築工事">
+      <button onclick="addSite()">＋</button>
+    </div>
+    <div class="setting-list" id="siteList"></div>
+  </div>
+
+  <div class="section">
+    <label>作業者を追加</label>
+    <div class="setting-item">
+      <input type="text" id="newWorker" placeholder="例：田中 太郎">
+      <button onclick="addWorker()">＋</button>
+    </div>
+    <div class="setting-list" id="workerList"></div>
+  </div>
+</div>
+</div>
+
 <div class="toast" id="toast"></div>
+
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyFkpTdMK815NKHOgawnBzSs6CYLKudXZMunQsD2aBZG0d6FsdDZWmWIwhuii7S-AEy/exec';
 const today = new Date();
@@ -119,8 +185,137 @@ const mm = String(today.getMonth()+1).padStart(2,'0');
 const dd = String(today.getDate()).padStart(2,'0');
 document.getElementById('reportDate').value = `${yyyy}-${mm}-${dd}`;
 addTask();
+loadSettings();
 loadHistory();
 let currentReport = {};
+let selectedWorker = '';
+
+function showSettings() {
+  document.getElementById('mainPage').classList.remove('active');
+  document.getElementById('settingsPage').classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function showMain() {
+  document.getElementById('settingsPage').classList.remove('active');
+  document.getElementById('mainPage').classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function getSettings() {
+  try { return JSON.parse(localStorage.getItem('nippou_settings') || '{"sites":[],"workers":[]}'); } catch(e) { return {sites:[], workers:[]}; }
+}
+
+function saveSettings(s) {
+  localStorage.setItem('nippou_settings', JSON.stringify(s));
+}
+
+function loadSettings() {
+  const s = getSettings();
+  renderSiteSelect(s.sites);
+  renderWorkerPills(s.workers);
+  renderSiteList(s.sites);
+  renderWorkerList(s.workers);
+}
+
+function renderSiteSelect(sites) {
+  const sel = document.getElementById('siteName');
+  const val = sel.value;
+  sel.innerHTML = '<option value="">選択してください</option>';
+  sites.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    if (s === val) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function renderWorkerPills(workers) {
+  const el = document.getElementById('workerPills');
+  if (workers.length === 0) {
+    el.innerHTML = '<div class="no-data">設定画面から作業者を登録してください</div>';
+    selectedWorker = '';
+    return;
+  }
+  el.innerHTML = workers.map(w => `<button class="pill${selectedWorker===w?' active':''}" onclick="selectWorker(this,'${w}')">${w}</button>`).join('');
+}
+
+function selectWorker(el, name) {
+  document.getElementById('workerPills').querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  selectedWorker = name;
+}
+
+function renderSiteList(sites) {
+  const el = document.getElementById('siteList');
+  if (sites.length === 0) { el.innerHTML = '<div class="no-data">登録された現場はありません</div>'; return; }
+  el.innerHTML = sites.map((s, i) => `
+    <div class="setting-item">
+      <input type="text" value="${s}" onchange="updateSite(${i}, this.value)">
+      <button onclick="deleteSite(${i})">✕</button>
+    </div>`).join('');
+}
+
+function renderWorkerList(workers) {
+  const el = document.getElementById('workerList');
+  if (workers.length === 0) { el.innerHTML = '<div class="no-data">登録された作業者はいません</div>'; return; }
+  el.innerHTML = workers.map((w, i) => `
+    <div class="setting-item">
+      <input type="text" value="${w}" onchange="updateWorker(${i}, this.value)">
+      <button onclick="deleteWorker(${i})">✕</button>
+    </div>`).join('');
+}
+
+function addSite() {
+  const input = document.getElementById('newSite');
+  const val = input.value.trim();
+  if (!val) return;
+  const s = getSettings();
+  s.sites.push(val);
+  saveSettings(s);
+  input.value = '';
+  loadSettings();
+  showToast('現場名を追加しました', 'green');
+}
+
+function deleteSite(i) {
+  const s = getSettings();
+  s.sites.splice(i, 1);
+  saveSettings(s);
+  loadSettings();
+}
+
+function updateSite(i, val) {
+  const s = getSettings();
+  s.sites[i] = val;
+  saveSettings(s);
+  renderSiteSelect(s.sites);
+}
+
+function addWorker() {
+  const input = document.getElementById('newWorker');
+  const val = input.value.trim();
+  if (!val) return;
+  const s = getSettings();
+  s.workers.push(val);
+  saveSettings(s);
+  input.value = '';
+  loadSettings();
+  showToast('作業者を追加しました', 'green');
+}
+
+function deleteWorker(i) {
+  const s = getSettings();
+  s.workers.splice(i, 1);
+  saveSettings(s);
+  loadSettings();
+}
+
+function updateWorker(i, val) {
+  const s = getSettings();
+  s.workers[i] = val;
+  saveSettings(s);
+}
 
 function addTask() {
   const list = document.getElementById('taskList');
@@ -143,36 +338,40 @@ function formatDate(dateStr) {
 
 function generateReport() {
   const date = document.getElementById('reportDate').value;
-  const site = document.getElementById('siteName').value.trim();
-  const partner = document.getElementById('partner').value.trim();
+  const site = document.getElementById('siteName').value;
   const start = document.getElementById('startTime').value;
   const end = document.getElementById('endTime').value;
   const tasks = Array.from(document.querySelectorAll('.task-row textarea')).map(t => t.value.trim()).filter(Boolean);
+  const parking = document.getElementById('parking').value;
+  const highway = document.getElementById('highway').value;
   const notes = document.getElementById('notes').value.trim();
+
   if (!date) { alert('日付を選択してください'); return; }
-  if (!site) { alert('現場名を入力してください'); return; }
+  if (!site) { alert('現場名を選択してください'); return; }
+  if (!selectedWorker) { alert('作業者を選択してください'); return; }
   if (tasks.length === 0) { alert('作業内容を1つ以上入力してください'); return; }
+
   const dateLabel = formatDate(date);
   const timeStr = (start && end) ? `${start} 〜 ${end}` : (start ? `${start} 〜` : '―');
+
   let report = `【日報】${dateLabel}\n`;
   report += `━━━━━━━━━━━━━━━\n`;
   report += `■ 現場名\n${site}\n\n`;
-  report += `■ 合番者\n${partner || '―'}\n\n`;
+  report += `■ 作業者\n${selectedWorker}\n\n`;
   report += `■ 作業時間\n${timeStr}\n\n`;
   report += `■ 作業内容\n`;
   tasks.forEach((t, i) => { report += `${i+1}. ${t}\n`; });
-  const parking = document.getElementById('parking').value;
-  const highway = document.getElementById('highway').value;
   if (parking) report += `\n■ 駐車場代\n${parseInt(parking).toLocaleString()}円`;
   if (highway) report += `\n■ 高速代\n${parseInt(highway).toLocaleString()}円`;
   if (notes) report += `\n■ 備考\n${notes}`;
+
   document.getElementById('reportOutput').textContent = report;
   document.getElementById('outputArea').style.display = 'block';
   currentReport = { date, dateLabel, site, report };
   const btn = document.getElementById('mainBtn');
   btn.textContent = 'コピー ＆ カレンダー登録';
   btn.disabled = false;
-  saveToHistory({ date, dateLabel, site, partner, start, end, tasks, notes, report });
+  saveToHistory({ date, dateLabel, site, worker: selectedWorker, start, end, tasks, parking, highway, notes, report });
   loadHistory();
   setTimeout(() => { document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
 }
@@ -219,10 +418,14 @@ function showToast(msg, color) {
 
 function clearForm() {
   document.getElementById('reportDate').value = `${yyyy}-${mm}-${dd}`;
-  ['siteName','partner','startTime','endTime','parking','highway','notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('siteName').value = '';
+  ['startTime','endTime','parking','highway','notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('taskList').innerHTML = '';
   document.getElementById('outputArea').style.display = 'none';
-  currentReport = {}; addTask();
+  document.getElementById('workerPills').querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  selectedWorker = '';
+  currentReport = {};
+  addTask();
 }
 
 function saveToHistory(entry) {
@@ -242,7 +445,7 @@ function loadHistory() {
   el.innerHTML = history.map((h, i) => `
     <div class="history-item" onclick="loadEntry(${i})">
       <div class="history-date">${h.dateLabel}　${h.site}</div>
-      <div class="history-preview">${h.tasks.join(' / ')}</div>
+      <div class="history-preview">${(h.tasks||[]).join(' / ')}</div>
     </div>`).join('');
   window._history = history;
 }
@@ -251,12 +454,15 @@ function loadEntry(i) {
   const h = window._history[i];
   document.getElementById('reportDate').value = h.date;
   document.getElementById('siteName').value = h.site || '';
-  document.getElementById('partner').value = h.partner || '';
   document.getElementById('startTime').value = h.start || '';
   document.getElementById('endTime').value = h.end || '';
+  document.getElementById('parking').value = h.parking || '';
+  document.getElementById('highway').value = h.highway || '';
   document.getElementById('notes').value = h.notes || '';
   document.getElementById('taskList').innerHTML = '';
-  h.tasks.forEach(t => { addTask(); const rows = document.querySelectorAll('.task-row textarea'); rows[rows.length-1].value = t; });
+  (h.tasks||[]).forEach(t => { addTask(); const rows = document.querySelectorAll('.task-row textarea'); rows[rows.length-1].value = t; });
+  selectedWorker = h.worker || '';
+  renderWorkerPills(getSettings().workers);
   document.getElementById('reportOutput').textContent = h.report;
   currentReport = { date: h.date, dateLabel: h.dateLabel, site: h.site, report: h.report };
   document.getElementById('outputArea').style.display = 'block';
