@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="現場日報">
+<meta name="theme-color" content="#1D9E75">
+<title>現場日報</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; }
+.container { padding: 16px; max-width: 480px; margin: auto; }
+h2 { font-size: 17px; font-weight: 600; color: #1a1a1a; margin-bottom: 16px; padding-top: 8px; }
+.section { margin-bottom: 16px; }
+label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; font-weight: 500; letter-spacing: 0.03em; }
+input[type="date"], input[type="text"], input[type="time"], textarea {
+  width: 100%; padding: 13px 14px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+  color: #1a1a1a;
+  font-size: 16px;
+  font-family: inherit;
+  appearance: none; -webkit-appearance: none;
+}
+input:focus, textarea:focus { outline: none; border-color: #1D9E75; box-shadow: 0 0 0 2px rgba(29,158,117,0.15); }
+textarea { resize: none; min-height: 80px; line-height: 1.6; }
+.time-row { display: flex; align-items: center; gap: 8px; }
+.time-row input { flex: 1; }
+.time-sep { font-size: 15px; color: #666; flex-shrink: 0; }
+.task-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+.task-row textarea { flex: 1; min-height: 72px; }
+.del-btn { background: #fff; border: 1px solid #ddd; border-radius: 10px; width: 40px; height: 40px; cursor: pointer; color: #999; font-size: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.del-btn:active { background: #f5f5f5; }
+.add-btn { background: #fff; border: 1px dashed #ccc; border-radius: 12px; padding: 13px 16px; cursor: pointer; color: #666; font-size: 15px; width: 100%; margin-top: 2px; }
+.add-btn:active { background: #f5f5f5; }
+.action-row { display: flex; gap: 10px; margin-top: 20px; }
+.btn { flex: 1; padding: 14px 10px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 600; border: 1px solid #ddd; background: #fff; color: #1a1a1a; text-align: center; }
+.btn:active { opacity: 0.75; }
+.btn.primary { background: #1D9E75; border-color: #0F6E56; color: #fff; }
+.btn.clear { flex: 0 0 auto; padding: 14px 20px; }
+.output-box { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 14px 16px; font-size: 14px; white-space: pre-wrap; color: #1a1a1a; line-height: 1.8; margin-top: 16px; }
+.out-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.out-btn { display: block; width: 100%; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; text-align: center; cursor: pointer; border: none; }
+.out-btn:active { opacity: 0.8; }
+.line-btn { background: #06C755; color: #fff; font-size: 17px; }
+.gcal-btn { background: #1a73e8; color: #fff; font-size: 15px; }
+.gcal-btn:disabled { background: #ccc; color: #fff; }
+.hint { font-size: 12px; color: #999; text-align: center; line-height: 1.5; }
+.divider { border: none; border-top: 1px solid #eee; margin: 24px 0; }
+.history-title { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 10px; }
+.history-item { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; }
+.history-item:active { background: #f5f5f5; }
+.history-date { font-size: 12px; color: #999; }
+.history-preview { font-size: 13px; color: #1a1a1a; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 12px 28px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; color: #fff; }
+.toast.show { opacity: 1; }
+.toast.green { background: #06C755; }
+.toast.blue { background: #1a73e8; }
+.toast.red { background: #e53935; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>現場日報</h2>
+  <div class="section">
+    <label>日付</label>
+    <input type="date" id="reportDate">
+  </div>
+  <div class="section">
+    <label>現場名</label>
+    <input type="text" id="siteName" placeholder="例：〇〇ビル新築工事">
+  </div>
+  <div class="section">
+    <label>合番者</label>
+    <input type="text" id="partner" placeholder="例：田中 太郎">
+  </div>
+  <div class="section">
+    <label>作業時間</label>
+    <div class="time-row">
+      <input type="time" id="startTime">
+      <span class="time-sep">〜</span>
+      <input type="time" id="endTime">
+    </div>
+  </div>
+  <div class="section">
+    <label>作業内容</label>
+    <div id="taskList"></div>
+    <button class="add-btn" onclick="addTask()">＋ 作業を追加</button>
+  </div>
+  <div class="section">
+    <label>備考</label>
+    <textarea id="notes" placeholder="特記事項があれば入力してください"></textarea>
+  </div>
+  <div class="action-row">
+    <button class="btn primary" onclick="generateReport()">日報を生成</button>
+    <button class="btn clear" onclick="clearForm()">クリア</button>
+  </div>
+  <div id="outputArea" style="display:none;">
+    <div class="output-box" id="reportOutput"></div>
+    <div class="out-actions">
+      <button class="out-btn line-btn" onclick="copyAndOpenLine()">コピーしてLINEを開く</button>
+      <p class="hint">タップすると日報がコピーされてLINEが起動します<br>グループを開いて長押し → 貼り付け → 送信</p>
+      <button class="out-btn gcal-btn" id="gcalBtn" onclick="registerToCalendar()">Googleカレンダーに自動登録</button>
+    </div>
+  </div>
+  <hr class="divider">
+  <div class="history-title">過去の日報</div>
+  <div id="historyList"><span style="font-size:13px;color:#999;">保存された日報はありません</span></div>
+</div>
+<div class="toast" id="toast"></div>
+<a id="lineAnchor" href="line://" target="_blank" style="display:none;"></a>
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyFkpTdMK815NKHOgawnBzSs6CYLKudXZMunQsD2aBZG0d6FsdDZWmWIwhuii7S-AEy/exec';
+const today = new Date();
+const yyyy = today.getFullYear();
+const mm = String(today.getMonth()+1).padStart(2,'0');
+const dd = String(today.getDate()).padStart(2,'0');
+document.getElementById('reportDate').value = `${yyyy}-${mm}-${dd}`;
+addTask();
+loadHistory();
+let currentReport = {};
+function addTask() {
+  const list = document.getElementById('taskList');
+  const row = document.createElement('div');
+  row.className = 'task-row';
+  row.innerHTML = `<textarea placeholder="作業内容を入力"></textarea><button class="del-btn" onclick="removeTask(this)">✕</button>`;
+  list.appendChild(row);
+}
+function removeTask(btn) {
+  const rows = document.querySelectorAll('.task-row');
+  if (rows.length > 1) btn.parentElement.remove();
+}
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const wd = ['日','月','火','水','木','金','土'][d.getDay()];
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${wd}）`;
+}
+function generateReport() {
+  const date = document.getElementById('reportDate').value;
+  const site = document.getElementById('siteName').value.trim();
+  const partner = document.getElementById('partner').value.trim();
+  const start = document.getElementById('startTime').value;
+  const end = document.getElementById('endTime').value;
+  const tasks = Array.from(document.querySelectorAll('.task-row textarea')).map(t => t.value.trim()).filter(Boolean);
+  const notes = document.getElementById('notes').value.trim();
+  if (!date) { alert('日付を選択してください'); return; }
+  if (!site) { alert('現場名を入力してください'); return; }
+  if (tasks.length === 0) { alert('作業内容を1つ以上入力してください'); return; }
+  const dateLabel = formatDate(date);
+  const timeStr = (start && end) ? `${start} 〜 ${end}` : (start ? `${start} 〜` : '―');
+  let report = `【日報】${dateLabel}\n`;
+  report += `━━━━━━━━━━━━━━━\n`;
+  report += `■ 現場名\n${site}\n\n`;
+  report += `■ 合番者\n${partner || '―'}\n\n`;
+  report += `■ 作業時間\n${timeStr}\n\n`;
+  report += `■ 作業内容\n`;
+  tasks.forEach((t, i) => { report += `${i+1}. ${t}\n`; });
+  if (notes) report += `\n■ 備考\n${notes}`;
+  document.getElementById('reportOutput').textContent = report;
+  document.getElementById('outputArea').style.display = 'block';
+  currentReport = { date, dateLabel, site, report };
+  const gcalBtn = document.getElementById('gcalBtn');
+  gcalBtn.textContent = 'Googleカレンダーに自動登録';
+  gcalBtn.disabled = false;
+  saveToHistory({ date, dateLabel, site, partner, start, end, tasks, notes, report });
+  loadHistory();
+  setTimeout(() => { document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+}
+function registerToCalendar() {
+  const btn = document.getElementById('gcalBtn');
+  btn.textContent = '登録中...';
+  btn.disabled = true;
+  fetch(GAS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: `日報 ${currentReport.site}`, detail: currentReport.report, date: currentReport.date })
+  })
+  .then(() => { btn.textContent = '登録完了！'; showToast('カレンダーに登録しました！', 'blue'); })
+  .catch(() => { btn.textContent = 'Googleカレンダーに自動登録'; btn.disabled = false; showToast('登録に失敗しました', 'red'); });
+}
+function copyAndOpenLine() {
+  const text = document.getElementById('reportOutput').textContent;
+  const doOpen = () => { showToast('コピーしました！', 'green'); setTimeout(() => { document.getElementById('lineAnchor').click(); }, 700); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(doOpen).catch(() => { fallbackCopy(text); doOpen(); });
+  } else { fallbackCopy(text); doOpen(); }
+}
+function fallbackCopy(text) {
+  const el = document.createElement('textarea');
+  el.value = text; el.style.position = 'fixed'; el.style.opacity = '0';
+  document.body.appendChild(el); el.focus(); el.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(el);
+}
+function showToast(msg, color) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${color} show`;
+  setTimeout(() => { t.className = 'toast'; }, 2500);
+}
+function clearForm() {
+  document.getElementById('reportDate').value = `${yyyy}-${mm}-${dd}`;
+  ['siteName','partner','startTime','endTime','notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('taskList').innerHTML = '';
+  document.getElementById('outputArea').style.display = 'none';
+  currentReport = {}; addTask();
+}
+function saveToHistory(entry) {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem('nippou_history_v2') || '[]'); } catch(e) {}
+  history = history.filter(h => !(h.date === entry.date && h.site === entry.site));
+  history.unshift(entry);
+  if (history.length > 20) history = history.slice(0, 20);
+  try { localStorage.setItem('nippou_history_v2', JSON.stringify(history)); } catch(e) {}
+}
+function loadHistory() {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem('nippou_history_v2') || '[]'); } catch(e) {}
+  const el = document.getElementById('historyList');
+  if (history.length === 0) { el.innerHTML = '<span style="font-size:13px;color:#999;">保存された日報はありません</span>'; return; }
+  el.innerHTML = history.map((h, i) => `
+    <div class="history-item" onclick="loadEntry(${i})">
+      <div class="history-date">${h.dateLabel}　${h.site}</div>
+      <div class="history-preview">${h.tasks.join(' / ')}</div>
+    </div>`).join('');
+  window._history = history;
+}
+function loadEntry(i) {
+  const h = window._history[i];
+  document.getElementById('reportDate').value = h.date;
+  document.getElementById('siteName').value = h.site || '';
+  document.getElementById('partner').value = h.partner || '';
+  document.getElementById('startTime').value = h.start || '';
+  document.getElementById('endTime').value = h.end || '';
+  document.getElementById('notes').value = h.notes || '';
+  document.getElementById('taskList').innerHTML = '';
+  h.tasks.forEach(t => { addTask(); const rows = document.querySelectorAll('.task-row textarea'); rows[rows.length-1].value = t; });
+  document.getElementById('reportOutput').textContent = h.report;
+  currentReport = { date: h.date, dateLabel: h.dateLabel, site: h.site, report: h.report };
+  document.getElementById('outputArea').style.display = 'block';
+  document.getElementById('gcalBtn').textContent = 'Googleカレンダーに自動登録';
+  document.getElementById('gcalBtn').disabled = false;
+}
+</script>
+</body>
+</html>
