@@ -14,14 +14,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .page { display: none; }
 .page.active { display: block; }
 .container { padding: 16px; max-width: 480px; margin: auto; }
-
 .top-header { background: #0a0a1a; padding: 36px 24px 28px; position: relative; overflow: hidden; text-align: center; }
 .top-header .circuit { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 .top-header .steve-wrap { position: relative; z-index: 2; display: inline-block; margin-bottom: 12px; image-rendering: pixelated; filter: drop-shadow(0 0 10px #1D9E75) drop-shadow(0 0 20px rgba(29,158,117,0.5)); }
 .top-header .badge { display: inline-block; border: 1px solid #1D9E75; color: #1D9E75; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 99px; letter-spacing: 0.1em; margin-bottom: 10px; position: relative; z-index: 1; text-shadow: 0 0 6px #1D9E75; box-shadow: 0 0 8px rgba(29,158,117,0.4); }
 .top-header .title { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 4px; position: relative; z-index: 1; text-shadow: 0 0 10px rgba(29,158,117,0.8), 0 0 20px rgba(29,158,117,0.4); }
 .top-header .sub { font-size: 12px; color: rgba(255,255,255,0.5); position: relative; z-index: 1; }
-
 .top-cards { padding: 20px 16px; display: flex; flex-direction: column; gap: 14px; }
 .top-card { background: #fff; border-radius: 16px; border: 1px solid #eee; padding: 22px 20px; display: flex; align-items: center; gap: 16px; cursor: pointer; }
 .top-card:active { opacity: 0.75; }
@@ -31,7 +29,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .top-card .card-text h3 { font-size: 16px; font-weight: 600; color: #1a1a1a; margin-bottom: 3px; }
 .top-card .card-text p { font-size: 12px; color: #999; }
 .top-card .arr { margin-left: auto; color: #ccc; font-size: 22px; flex-shrink: 0; }
-
 h2 { font-size: 17px; font-weight: 600; color: #1a1a1a; margin-bottom: 16px; padding-top: 8px; }
 .section { margin-bottom: 16px; }
 label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; font-weight: 500; letter-spacing: 0.03em; }
@@ -52,6 +49,7 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
 .pill.active { background: #E1F5EE; border-color: #1D9E75; color: #0F6E56; font-weight: 500; }
 .pill:active { opacity: 0.7; }
 .no-data { font-size: 13px; color: #999; padding: 8px 0; }
+.loading { font-size: 13px; color: #1D9E75; padding: 8px 0; }
 .time-row { display: flex; align-items: center; gap: 8px; }
 .time-row input { flex: 1; }
 .time-sep { font-size: 15px; color: #666; flex-shrink: 0; }
@@ -206,7 +204,7 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
   <div class="section">
     <label>作業者（複数選択可）</label>
     <div class="pills" id="workerPills">
-      <div class="no-data">現場・作業者管理から登録してください</div>
+      <div class="loading">読み込み中...</div>
     </div>
   </div>
   <div class="section">
@@ -263,7 +261,7 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
       <input type="text" id="newSite" placeholder="例：〇〇ビル新築工事">
       <button onclick="addSite()">＋</button>
     </div>
-    <div id="siteList"><div class="no-data">登録された現場はありません</div></div>
+    <div id="siteList"><div class="loading">読み込み中...</div></div>
   </div>
   <hr class="divider">
   <div class="section">
@@ -272,7 +270,7 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
       <input type="text" id="newWorker" placeholder="例：田中 太郎">
       <button onclick="addWorker()">＋</button>
     </div>
-    <div id="workerList"><div class="no-data">登録された作業者はいません</div></div>
+    <div id="workerList"><div class="loading">読み込み中...</div></div>
   </div>
 </div>
 </div>
@@ -295,19 +293,27 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
+  if (id === 'reportPage' || id === 'settingsPage') loadFromServer();
 }
 
-function loadAll() {
-  try { sites = JSON.parse(localStorage.getItem('nippou_sites') || '[]'); } catch(e) { sites = []; }
-  try { workers = JSON.parse(localStorage.getItem('nippou_workers') || '[]'); } catch(e) { workers = []; }
+async function loadFromServer() {
+  try {
+    const [sRes, wRes] = await Promise.all([
+      fetch(GAS_URL + '?type=sites'),
+      fetch(GAS_URL + '?type=workers')
+    ]);
+    const sData = await sRes.json();
+    const wData = await wRes.json();
+    if (sData.status === 'ok') sites = sData.data;
+    if (wData.status === 'ok') workers = wData.data;
+  } catch(e) {
+    showToast('データ読み込みに失敗しました', 'red');
+  }
   renderSiteSelect();
   renderWorkerPills();
   renderSiteList();
   renderWorkerList();
 }
-
-function saveSites() { localStorage.setItem('nippou_sites', JSON.stringify(sites)); }
-function saveWorkers() { localStorage.setItem('nippou_workers', JSON.stringify(workers)); }
 
 function renderSiteSelect() {
   const sel = document.getElementById('siteName');
@@ -348,7 +354,7 @@ function renderSiteList() {
   el.innerHTML = sites.map((s, i) => `
     <div class="setting-item">
       <div class="name">${s}</div>
-      <button class="del" onclick="deleteSite(${i})">✕</button>
+      <button class="del" onclick="deleteSite('${s}')">✕</button>
     </div>`).join('');
 }
 
@@ -358,47 +364,57 @@ function renderWorkerList() {
   el.innerHTML = workers.map((w, i) => `
     <div class="setting-item">
       <div class="name">${w}</div>
-      <button class="del" onclick="deleteWorker(${i})">✕</button>
+      <button class="del" onclick="deleteWorker('${w}')">✕</button>
     </div>`).join('');
 }
 
-function addSite() {
+async function addSite() {
   const input = document.getElementById('newSite');
   const val = input.value.trim();
   if (!val) return;
-  sites.push(val);
-  saveSites();
   input.value = '';
+  await gasPost({ action: 'addSite', value: val });
+  sites.push(val);
   renderSiteSelect();
   renderSiteList();
   showToast('現場名を追加しました', 'green');
 }
 
-function deleteSite(i) {
-  sites.splice(i, 1);
-  saveSites();
+async function deleteSite(val) {
+  await gasPost({ action: 'deleteSite', value: val });
+  sites = sites.filter(s => s !== val);
   renderSiteSelect();
   renderSiteList();
 }
 
-function addWorker() {
+async function addWorker() {
   const input = document.getElementById('newWorker');
   const val = input.value.trim();
   if (!val) return;
-  workers.push(val);
-  saveWorkers();
   input.value = '';
+  await gasPost({ action: 'addWorker', value: val });
+  workers.push(val);
   renderWorkerPills();
   renderWorkerList();
   showToast('作業者を追加しました', 'green');
 }
 
-function deleteWorker(i) {
-  selectedWorkers = selectedWorkers.filter(w => w !== workers[i]);
-  workers.splice(i, 1);
-  saveWorkers();
+async function deleteWorker(val) {
+  selectedWorkers = selectedWorkers.filter(w => w !== val);
+  await gasPost({ action: 'deleteWorker', value: val });
+  workers = workers.filter(w => w !== val);
   renderWorkerPills();
   renderWorkerList();
+}
+
+async function gasPost(data) {
+  try {
+    await fetch(GAS_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  } catch(e) {}
 }
 
 function addTask() {
@@ -447,7 +463,7 @@ function generateReport() {
   if (notes) report += `\n■ 備考\n${notes}`;
   document.getElementById('reportOutput').textContent = report;
   document.getElementById('outputArea').style.display = 'block';
-  currentReport = { date, dateLabel, site, report };
+  currentReport = { date, dateLabel, site, report, workers: selectedWorkers.join('、'), timeStr, tasks: tasks.join('\n'), parking, highway, notes };
   const btn = document.getElementById('mainBtn');
   btn.textContent = 'コピー ＆ カレンダー登録';
   btn.disabled = false;
@@ -456,7 +472,7 @@ function generateReport() {
   setTimeout(() => { document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
 }
 
-function copyAndRegister() {
+async function copyAndRegister() {
   const text = document.getElementById('reportOutput').textContent;
   const btn = document.getElementById('mainBtn');
   btn.textContent = '処理中...';
@@ -466,20 +482,28 @@ function copyAndRegister() {
       navigator.clipboard.writeText(text).then(resolve).catch(() => { fallbackCopy(text); resolve(); });
     } else { fallbackCopy(text); resolve(); }
   });
-  doCopy().then(() => {
-    return fetch(GAS_URL, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: `日報 ${currentReport.site}`, detail: currentReport.report, date: currentReport.date })
+  try {
+    await doCopy();
+    await gasPost({
+      action: 'saveReport',
+      title: `日報 ${currentReport.site}`,
+      detail: currentReport.report,
+      date: currentReport.date,
+      site: currentReport.site,
+      workers: currentReport.workers,
+      timeStr: currentReport.timeStr,
+      tasks: currentReport.tasks,
+      parking: currentReport.parking,
+      highway: currentReport.highway,
+      notes: currentReport.notes
     });
-  }).then(() => {
     btn.textContent = '完了！';
     showToast('コピー ＆ カレンダー登録 完了！', 'green');
-  }).catch(() => {
+  } catch(e) {
     btn.textContent = 'コピー ＆ カレンダー登録';
     btn.disabled = false;
     showToast('エラーが発生しました', 'red');
-  });
+  }
 }
 
 function fallbackCopy(text) {
@@ -549,11 +573,9 @@ function loadEntry(i) {
   const btn = document.getElementById('mainBtn');
   btn.textContent = 'コピー ＆ カレンダー登録';
   btn.disabled = false;
-  showPage('reportPage');
 }
 
 document.getElementById('reportDate').value = `${yyyy}-${mm}-${dd}`;
-loadAll();
 addTask();
 loadHistory();
 </script>
