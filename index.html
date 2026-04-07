@@ -101,9 +101,8 @@ textarea { resize: none; min-height: 80px; line-height: 1.6; }
   <div id="outputArea" style="display:none;">
     <div class="output-box" id="reportOutput"></div>
     <div class="out-actions">
-      <button class="out-btn line-btn" onclick="copyAndOpenLine()">コピーしてLINEを開く</button>
-      <p class="hint">タップすると日報がコピーされてLINEが起動します<br>グループを開いて長押し → 貼り付け → 送信</p>
-      <button class="out-btn gcal-btn" id="gcalBtn" onclick="registerToCalendar()">Googleカレンダーに自動登録</button>
+     <button class="out-btn line-btn" id="mainBtn" onclick="copyAndRegister()">コピー ＆ カレンダー登録</button>
+<p class="hint">タップすると日報がコピーされ、カレンダーにも自動登録されます<br>あとはLINEを開いて長押し → 貼り付け → 送信</p>
     </div>
   </div>
   <hr class="divider">
@@ -182,7 +181,34 @@ function registerToCalendar() {
   .then(() => { btn.textContent = '登録完了！'; showToast('カレンダーに登録しました！', 'blue'); })
   .catch(() => { btn.textContent = 'Googleカレンダーに自動登録'; btn.disabled = false; showToast('登録に失敗しました', 'red'); });
 }
-function copyAndOpenLine() {
+function copyAndRegister() {
+  const text = document.getElementById('reportOutput').textContent;
+  const btn = document.getElementById('mainBtn');
+  btn.textContent = '処理中...';
+  btn.disabled = true;
+
+  const doCopy = () => new Promise((resolve) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(resolve).catch(() => { fallbackCopy(text); resolve(); });
+    } else { fallbackCopy(text); resolve(); }
+  });
+
+  doCopy().then(() => {
+    return fetch(GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: `日報 ${currentReport.site}`, detail: currentReport.report, date: currentReport.date })
+    });
+  }).then(() => {
+    btn.textContent = '完了！';
+    showToast('コピー ＆ カレンダー登録 完了！', 'green');
+  }).catch(() => {
+    btn.textContent = 'コピー ＆ カレンダー登録';
+    btn.disabled = false;
+    showToast('エラーが発生しました', 'red');
+  });
+}
   const text = document.getElementById('reportOutput').textContent;
   const doOpen = () => { showToast('コピーしました！', 'green'); setTimeout(() => { document.getElementById('lineAnchor').click(); }, 700); };
   if (navigator.clipboard && navigator.clipboard.writeText) {
