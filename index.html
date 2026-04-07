@@ -86,7 +86,13 @@ textarea { resize: none; min-height: 80px; line-height: 1.6; }
     <button class="add-btn" onclick="addTask()">＋ 作業を追加</button>
   </div>
   <div class="section">
-    <label>備考</label>
+    <label>駐車場代（円）</label>
+    <input type="number" id="parking" placeholder="例：500">
+  </div>
+  <div class="section">
+    <label>高速代（円）</label>
+    <input type="number" id="highway" placeholder="例：1000">
+  </div>
     <textarea id="notes" placeholder="特記事項があれば入力してください"></textarea>
   </div>
   <div class="action-row">
@@ -155,6 +161,10 @@ function generateReport() {
   report += `■ 作業時間\n${timeStr}\n\n`;
   report += `■ 作業内容\n`;
   tasks.forEach((t, i) => { report += `${i+1}. ${t}\n`; });
+  const parking = document.getElementById('parking').value;
+  const highway = document.getElementById('highway').value;
+  if (parking) report += `\n■ 駐車場代\n${parseInt(parking).toLocaleString()}円`;
+  if (highway) report += `\n■ 高速代\n${parseInt(highway).toLocaleString()}円`;
   if (notes) report += `\n■ 備考\n${notes}`;
   document.getElementById('reportOutput').textContent = report;
   document.getElementById('outputArea').style.display = 'block';
@@ -209,7 +219,7 @@ function showToast(msg, color) {
 
 function clearForm() {
   document.getElementById('reportDate').value = `${yyyy}-${mm}-${dd}`;
-  ['siteName','partner','startTime','endTime','notes'].forEach(id => document.getElementById(id).value = '');
+  ['siteName','partner','startTime','endTime','parking','highway','notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('taskList').innerHTML = '';
   document.getElementById('outputArea').style.display = 'none';
   currentReport = {}; addTask();
