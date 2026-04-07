@@ -15,12 +15,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .page.active { display: block; }
 .container { padding: 16px; max-width: 480px; margin: auto; }
 
-.top-header { background: #0a0a1a; padding: 40px 24px 32px; position: relative; overflow: hidden; text-align: center; }
+.top-header { background: #0a0a1a; padding: 36px 24px 28px; position: relative; overflow: hidden; text-align: center; }
 .top-header .circuit { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-.top-header .steve-wrap { position: relative; z-index: 2; display: inline-block; margin-bottom: 12px; filter: drop-shadow(0 0 8px #1D9E75) drop-shadow(0 0 16px rgba(29,158,117,0.5)); }
+.top-header .steve-wrap { position: relative; z-index: 2; display: inline-block; margin-bottom: 12px; image-rendering: pixelated; filter: drop-shadow(0 0 10px #1D9E75) drop-shadow(0 0 20px rgba(29,158,117,0.5)); }
 .top-header .badge { display: inline-block; border: 1px solid #1D9E75; color: #1D9E75; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 99px; letter-spacing: 0.1em; margin-bottom: 10px; position: relative; z-index: 1; text-shadow: 0 0 6px #1D9E75; box-shadow: 0 0 8px rgba(29,158,117,0.4); }
 .top-header .title { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 4px; position: relative; z-index: 1; text-shadow: 0 0 10px rgba(29,158,117,0.8), 0 0 20px rgba(29,158,117,0.4); }
 .top-header .sub { font-size: 12px; color: rgba(255,255,255,0.5); position: relative; z-index: 1; }
+
 .top-cards { padding: 20px 16px; display: flex; flex-direction: column; gap: 14px; }
 .top-card { background: #fff; border-radius: 16px; border: 1px solid #eee; padding: 22px 20px; display: flex; align-items: center; gap: 16px; cursor: pointer; }
 .top-card:active { opacity: 0.75; }
@@ -29,7 +30,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .top-card .icon.gray { background: #f0f0f0; }
 .top-card .card-text h3 { font-size: 16px; font-weight: 600; color: #1a1a1a; margin-bottom: 3px; }
 .top-card .card-text p { font-size: 12px; color: #999; }
-.top-card .arrow { margin-left: auto; color: #ccc; font-size: 22px; flex-shrink: 0; }
+.top-card .arr { margin-left: auto; color: #ccc; font-size: 22px; flex-shrink: 0; }
 
 h2 { font-size: 17px; font-weight: 600; color: #1a1a1a; margin-bottom: 16px; padding-top: 8px; }
 .section { margin-bottom: 16px; }
@@ -117,40 +118,47 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
       <circle cx="50" cy="160" r="2" fill="#1D9E75" opacity="0.4"/>
       <line x1="350" y1="180" x2="400" y2="180" stroke="#1D9E75" stroke-width="1" opacity="0.3"/>
       <circle cx="350" cy="180" r="2" fill="#1D9E75" opacity="0.4"/>
-      <line x1="160" y1="0" x2="160" y2="30" stroke="#00ffff" stroke-width="0.8" opacity="0.15"/>
-      <line x1="240" y1="0" x2="240" y2="30" stroke="#00ffff" stroke-width="0.8" opacity="0.15"/>
-      <line x1="160" y1="190" x2="160" y2="220" stroke="#00ffff" stroke-width="0.8" opacity="0.15"/>
-      <line x1="240" y1="190" x2="240" y2="220" stroke="#00ffff" stroke-width="0.8" opacity="0.15"/>
     </svg>
     <div class="steve-wrap">
-      <svg width="80" height="100" viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg">
-        <rect x="14" y="2" width="52" height="8" rx="2" fill="#f5a623"/>
-        <rect x="10" y="8" width="60" height="6" rx="1" fill="#e6951a"/>
-        <rect x="18" y="6" width="8" height="4" fill="#fff" opacity="0.3"/>
-        <rect x="16" y="14" width="48" height="44" rx="2" fill="#c8a882"/>
-        <rect x="22" y="24" width="12" height="10" rx="1" fill="#fff"/>
-        <rect x="46" y="24" width="12" height="10" rx="1" fill="#fff"/>
-        <rect x="25" y="26" width="7" height="7" rx="0.5" fill="#3a3aaa"/>
-        <rect x="49" y="26" width="7" height="7" rx="0.5" fill="#3a3aaa"/>
-        <rect x="27" y="28" width="3" height="3" fill="#1a1aff"/>
-        <rect x="51" y="28" width="3" height="3" fill="#1a1aff"/>
-        <rect x="28" y="28" width="1.5" height="1.5" fill="#fff"/>
-        <rect x="52" y="28" width="1.5" height="1.5" fill="#fff"/>
-        <rect x="34" y="36" width="12" height="8" rx="1" fill="#b8906a"/>
-        <rect x="24" y="46" width="8" height="4" rx="0.5" fill="#8B6347"/>
-        <rect x="36" y="48" width="8" height="4" rx="0.5" fill="#8B6347"/>
-        <rect x="48" y="46" width="8" height="4" rx="0.5" fill="#8B6347"/>
-        <rect x="12" y="58" width="56" height="36" rx="2" fill="#5b8ad4"/>
-        <rect x="12" y="58" width="56" height="6" rx="1" fill="#4a79c3"/>
-        <rect x="36" y="58" width="8" height="36" fill="#4a79c3" opacity="0.5"/>
-        <rect x="0" y="58" width="12" height="30" rx="2" fill="#c8a882"/>
-        <rect x="68" y="58" width="12" height="30" rx="2" fill="#c8a882"/>
-        <rect x="0" y="86" width="12" height="10" rx="1" fill="#b89870"/>
-        <rect x="68" y="86" width="12" height="10" rx="1" fill="#b89870"/>
-        <rect x="14" y="2" width="52" height="8" rx="2" fill="none" stroke="#ffcc00" stroke-width="1" opacity="0.8"/>
-        <rect x="10" y="8" width="60" height="6" rx="1" fill="none" stroke="#ffcc00" stroke-width="0.5" opacity="0.5"/>
+      <svg width="96" height="120" viewBox="0 0 16 20" xmlns="http://www.w3.org/2000/svg" style="width:96px;height:120px;">
+        <rect x="2" y="0" width="12" height="1" fill="#FFD700"/>
+        <rect x="1" y="1" width="14" height="1" fill="#FFC200"/>
+        <rect x="1" y="2" width="14" height="1" fill="#FFD700"/>
+        <rect x="0" y="3" width="16" height="1" fill="#FFC200"/>
+        <rect x="2" y="4" width="12" height="1" fill="#c8956c"/>
+        <rect x="1" y="5" width="14" height="1" fill="#c8956c"/>
+        <rect x="1" y="6" width="2" height="1" fill="#c8956c"/>
+        <rect x="3" y="6" width="2" height="2" fill="#4a4aff"/>
+        <rect x="3" y="6" width="1" height="1" fill="#fff" opacity="0.6"/>
+        <rect x="5" y="6" width="1" height="1" fill="#c8956c"/>
+        <rect x="6" y="6" width="1" height="2" fill="#c8956c"/>
+        <rect x="7" y="6" width="1" height="1" fill="#c8956c"/>
+        <rect x="8" y="6" width="1" height="1" fill="#c8956c"/>
+        <rect x="9" y="6" width="2" height="2" fill="#4a4aff"/>
+        <rect x="9" y="6" width="1" height="1" fill="#fff" opacity="0.6"/>
+        <rect x="11" y="6" width="2" height="1" fill="#c8956c"/>
+        <rect x="13" y="6" width="1" height="1" fill="#c8956c"/>
+        <rect x="1" y="7" width="14" height="1" fill="#c8956c"/>
+        <rect x="1" y="8" width="14" height="1" fill="#c8956c"/>
+        <rect x="6" y="8" width="4" height="1" fill="#b07850"/>
+        <rect x="1" y="9" width="14" height="1" fill="#c8956c"/>
+        <rect x="3" y="9" width="2" height="1" fill="#7a4a2a"/>
+        <rect x="6" y="9" width="4" height="1" fill="#c8956c"/>
+        <rect x="11" y="9" width="2" height="1" fill="#7a4a2a"/>
+        <rect x="1" y="10" width="14" height="1" fill="#c8956c"/>
+        <rect x="2" y="11" width="12" height="1" fill="#c8956c"/>
+        <rect x="2" y="12" width="12" height="6" fill="#4a7bc8"/>
+        <rect x="7" y="12" width="2" height="6" fill="#3a6ab7"/>
+        <rect x="2" y="12" width="12" height="1" fill="#3a6ab7"/>
+        <rect x="0" y="12" width="2" height="5" fill="#c8956c"/>
+        <rect x="14" y="12" width="2" height="5" fill="#c8956c"/>
+        <rect x="0" y="17" width="2" height="1" fill="#b07850"/>
+        <rect x="14" y="17" width="2" height="1" fill="#b07850"/>
+        <rect x="2" y="18" width="5" height="2" fill="#3a3aaa"/>
+        <rect x="9" y="18" width="5" height="2" fill="#3a3aaa"/>
       </svg>
     </div>
+    <br>
     <div class="badge">⚡ ELECTRICAL WORK</div>
     <div class="title">現場日報</div>
     <div class="sub">今日も一日お疲れ様です</div>
@@ -162,7 +170,7 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
         <h3>日報入力</h3>
         <p>日報を作成してLINEに送信</p>
       </div>
-      <div class="arrow">›</div>
+      <div class="arr">›</div>
     </div>
     <div class="top-card" onclick="showPage('settingsPage')">
       <div class="icon gray">🏗</div>
@@ -170,7 +178,7 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
         <h3>現場・作業者管理</h3>
         <p>現場名と作業者を登録・編集</p>
       </div>
-      <div class="arrow">›</div>
+      <div class="arr">›</div>
     </div>
   </div>
 </div>
@@ -196,7 +204,7 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
     </div>
   </div>
   <div class="section">
-    <label>作業者</label>
+    <label>作業者（複数選択可）</label>
     <div class="pills" id="workerPills">
       <div class="no-data">現場・作業者管理から登録してください</div>
     </div>
@@ -280,7 +288,7 @@ const dd = String(today.getDate()).padStart(2,'0');
 
 let sites = [];
 let workers = [];
-let selectedWorker = '';
+let selectedWorkers = [];
 let currentReport = {};
 
 function showPage(id) {
@@ -320,18 +328,17 @@ function renderWorkerPills() {
     return;
   }
   el.innerHTML = workers.map(w =>
-    `<button class="pill${selectedWorker === w ? ' active' : ''}" onclick="selectWorker(this,'${w}')">${w}</button>`
+    `<button class="pill${selectedWorkers.includes(w) ? ' active' : ''}" onclick="toggleWorker(this,'${w}')">${w}</button>`
   ).join('');
 }
 
-function selectWorker(el, name) {
-  if (selectedWorker === name) {
-    selectedWorker = '';
+function toggleWorker(el, name) {
+  if (selectedWorkers.includes(name)) {
+    selectedWorkers = selectedWorkers.filter(w => w !== name);
     el.classList.remove('active');
   } else {
-    document.getElementById('workerPills').querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    selectedWorkers.push(name);
     el.classList.add('active');
-    selectedWorker = name;
   }
 }
 
@@ -387,7 +394,7 @@ function addWorker() {
 }
 
 function deleteWorker(i) {
-  if (selectedWorker === workers[i]) selectedWorker = '';
+  selectedWorkers = selectedWorkers.filter(w => w !== workers[i]);
   workers.splice(i, 1);
   saveWorkers();
   renderWorkerPills();
@@ -424,14 +431,14 @@ function generateReport() {
   const notes = document.getElementById('notes').value.trim();
   if (!date) { alert('日付を選択してください'); return; }
   if (!site) { alert('現場名を選択してください'); return; }
-  if (!selectedWorker) { alert('作業者を選択してください'); return; }
+  if (selectedWorkers.length === 0) { alert('作業者を選択してください'); return; }
   if (tasks.length === 0) { alert('作業内容を1つ以上入力してください'); return; }
   const dateLabel = formatDate(date);
   const timeStr = (start && end) ? `${start} 〜 ${end}` : (start ? `${start} 〜` : '―');
   let report = `【日報】${dateLabel}\n`;
   report += `━━━━━━━━━━━━━━━\n`;
   report += `■ 現場名\n${site}\n\n`;
-  report += `■ 作業者\n${selectedWorker}\n\n`;
+  report += `■ 作業者\n${selectedWorkers.join('、')}\n\n`;
   report += `■ 作業時間\n${timeStr}\n\n`;
   report += `■ 作業内容\n`;
   tasks.forEach((t, i) => { report += `${i+1}. ${t}\n`; });
@@ -444,7 +451,7 @@ function generateReport() {
   const btn = document.getElementById('mainBtn');
   btn.textContent = 'コピー ＆ カレンダー登録';
   btn.disabled = false;
-  saveToHistory({ date, dateLabel, site, worker: selectedWorker, start, end, tasks, parking, highway, notes, report });
+  saveToHistory({ date, dateLabel, site, workers: selectedWorkers, start, end, tasks, parking, highway, notes, report });
   loadHistory();
   setTimeout(() => { document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
 }
@@ -495,7 +502,7 @@ function clearForm() {
   ['startTime','endTime','parking','highway','notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('taskList').innerHTML = '';
   document.getElementById('outputArea').style.display = 'none';
-  selectedWorker = '';
+  selectedWorkers = [];
   renderWorkerPills();
   currentReport = {};
   addTask();
@@ -534,7 +541,7 @@ function loadEntry(i) {
   document.getElementById('notes').value = h.notes || '';
   document.getElementById('taskList').innerHTML = '';
   (h.tasks||[]).forEach(t => { addTask(); const rows = document.querySelectorAll('.task-row textarea'); rows[rows.length-1].value = t; });
-  selectedWorker = h.worker || '';
+  selectedWorkers = h.workers || [];
   renderWorkerPills();
   document.getElementById('reportOutput').textContent = h.report;
   currentReport = { date: h.date, dateLabel: h.dateLabel, site: h.site, report: h.report };
@@ -542,6 +549,7 @@ function loadEntry(i) {
   const btn = document.getElementById('mainBtn');
   btn.textContent = 'コピー ＆ カレンダー登録';
   btn.disabled = false;
+  showPage('reportPage');
 }
 
 document.getElementById('reportDate').value = `${yyyy}-${mm}-${dd}`;
