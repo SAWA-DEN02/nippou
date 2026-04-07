@@ -17,12 +17,9 @@ h2 { font-size: 17px; font-weight: 600; color: #1a1a1a; margin-bottom: 16px; pad
 label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; font-weight: 500; letter-spacing: 0.03em; }
 input[type="date"], input[type="text"], input[type="time"], textarea {
   width: 100%; padding: 13px 14px;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  background: #fff;
-  color: #1a1a1a;
-  font-size: 16px;
-  font-family: inherit;
+  border: 1px solid #ddd; border-radius: 12px;
+  background: #fff; color: #1a1a1a;
+  font-size: 16px; font-family: inherit;
   appearance: none; -webkit-appearance: none;
 }
 input:focus, textarea:focus { outline: none; border-color: #1D9E75; box-shadow: 0 0 0 2px rgba(29,158,117,0.15); }
@@ -45,9 +42,8 @@ textarea { resize: none; min-height: 80px; line-height: 1.6; }
 .out-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
 .out-btn { display: block; width: 100%; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; text-align: center; cursor: pointer; border: none; }
 .out-btn:active { opacity: 0.8; }
-.line-btn { background: #06C755; color: #fff; font-size: 17px; }
-.gcal-btn { background: #1a73e8; color: #fff; font-size: 15px; }
-.gcal-btn:disabled { background: #ccc; color: #fff; }
+.main-btn { background: #1D9E75; color: #fff; font-size: 17px; }
+.main-btn:disabled { background: #ccc; }
 .hint { font-size: 12px; color: #999; text-align: center; line-height: 1.5; }
 .divider { border: none; border-top: 1px solid #eee; margin: 24px 0; }
 .history-title { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 10px; }
@@ -57,8 +53,7 @@ textarea { resize: none; min-height: 80px; line-height: 1.6; }
 .history-preview { font-size: 13px; color: #1a1a1a; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 12px 28px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; color: #fff; }
 .toast.show { opacity: 1; }
-.toast.green { background: #06C755; }
-.toast.blue { background: #1a73e8; }
+.toast.green { background: #1D9E75; }
 .toast.red { background: #e53935; }
 </style>
 </head>
@@ -101,8 +96,8 @@ textarea { resize: none; min-height: 80px; line-height: 1.6; }
   <div id="outputArea" style="display:none;">
     <div class="output-box" id="reportOutput"></div>
     <div class="out-actions">
-     <button class="out-btn line-btn" id="mainBtn" onclick="copyAndRegister()">コピー ＆ カレンダー登録</button>
-<p class="hint">タップすると日報がコピーされ、カレンダーにも自動登録されます<br>あとはLINEを開いて長押し → 貼り付け → 送信</p>
+      <button class="out-btn main-btn" id="mainBtn" onclick="copyAndRegister()">コピー ＆ カレンダー登録</button>
+      <p class="hint">タップすると日報がコピーされ、カレンダーにも自動登録されます<br>あとはLINEを開いて長押し → 貼り付け → 送信</p>
     </div>
   </div>
   <hr class="divider">
@@ -110,7 +105,6 @@ textarea { resize: none; min-height: 80px; line-height: 1.6; }
   <div id="historyList"><span style="font-size:13px;color:#999;">保存された日報はありません</span></div>
 </div>
 <div class="toast" id="toast"></div>
-<a id="lineAnchor" lhref="https://line.me/R/"" target="_blank" style="display:none;"></a>
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyFkpTdMK815NKHOgawnBzSs6CYLKudXZMunQsD2aBZG0d6FsdDZWmWIwhuii7S-AEy/exec';
 const today = new Date();
@@ -121,6 +115,7 @@ document.getElementById('reportDate').value = `${yyyy}-${mm}-${dd}`;
 addTask();
 loadHistory();
 let currentReport = {};
+
 function addTask() {
   const list = document.getElementById('taskList');
   const row = document.createElement('div');
@@ -128,15 +123,18 @@ function addTask() {
   row.innerHTML = `<textarea placeholder="作業内容を入力"></textarea><button class="del-btn" onclick="removeTask(this)">✕</button>`;
   list.appendChild(row);
 }
+
 function removeTask(btn) {
   const rows = document.querySelectorAll('.task-row');
   if (rows.length > 1) btn.parentElement.remove();
 }
+
 function formatDate(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   const wd = ['日','月','火','水','木','金','土'][d.getDay()];
   return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${wd}）`;
 }
+
 function generateReport() {
   const date = document.getElementById('reportDate').value;
   const site = document.getElementById('siteName').value.trim();
@@ -161,42 +159,27 @@ function generateReport() {
   document.getElementById('reportOutput').textContent = report;
   document.getElementById('outputArea').style.display = 'block';
   currentReport = { date, dateLabel, site, report };
-  const gcalBtn = document.getElementById('gcalBtn');
-  gcalBtn.textContent = 'Googleカレンダーに自動登録';
-  gcalBtn.disabled = false;
+  const btn = document.getElementById('mainBtn');
+  btn.textContent = 'コピー ＆ カレンダー登録';
+  btn.disabled = false;
   saveToHistory({ date, dateLabel, site, partner, start, end, tasks, notes, report });
   loadHistory();
   setTimeout(() => { document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
 }
-function registerToCalendar() {
-  const btn = document.getElementById('gcalBtn');
-  btn.textContent = '登録中...';
-  btn.disabled = true;
-  fetch(GAS_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: `日報 ${currentReport.site}`, detail: currentReport.report, date: currentReport.date })
-  })
-  .then(() => { btn.textContent = '登録完了！'; showToast('カレンダーに登録しました！', 'blue'); })
-  .catch(() => { btn.textContent = 'Googleカレンダーに自動登録'; btn.disabled = false; showToast('登録に失敗しました', 'red'); });
-}
+
 function copyAndRegister() {
   const text = document.getElementById('reportOutput').textContent;
   const btn = document.getElementById('mainBtn');
   btn.textContent = '処理中...';
   btn.disabled = true;
-
   const doCopy = () => new Promise((resolve) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(resolve).catch(() => { fallbackCopy(text); resolve(); });
     } else { fallbackCopy(text); resolve(); }
   });
-
   doCopy().then(() => {
     return fetch(GAS_URL, {
-      method: 'POST',
-      mode: 'no-cors',
+      method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: `日報 ${currentReport.site}`, detail: currentReport.report, date: currentReport.date })
     });
@@ -209,12 +192,7 @@ function copyAndRegister() {
     showToast('エラーが発生しました', 'red');
   });
 }
-  const text = document.getElementById('reportOutput').textContent;
-  const doOpen = () => { showToast('コピーしました！', 'green'); setTimeout(() => { document.getElementById('lineAnchor').click(); }, 700); };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(doOpen).catch(() => { fallbackCopy(text); doOpen(); });
-  } else { fallbackCopy(text); doOpen(); }
-}
+
 function fallbackCopy(text) {
   const el = document.createElement('textarea');
   el.value = text; el.style.position = 'fixed'; el.style.opacity = '0';
@@ -222,11 +200,13 @@ function fallbackCopy(text) {
   try { document.execCommand('copy'); } catch(e) {}
   document.body.removeChild(el);
 }
+
 function showToast(msg, color) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = `toast ${color} show`;
   setTimeout(() => { t.className = 'toast'; }, 2500);
 }
+
 function clearForm() {
   document.getElementById('reportDate').value = `${yyyy}-${mm}-${dd}`;
   ['siteName','partner','startTime','endTime','notes'].forEach(id => document.getElementById(id).value = '');
@@ -234,6 +214,7 @@ function clearForm() {
   document.getElementById('outputArea').style.display = 'none';
   currentReport = {}; addTask();
 }
+
 function saveToHistory(entry) {
   let history = [];
   try { history = JSON.parse(localStorage.getItem('nippou_history_v2') || '[]'); } catch(e) {}
@@ -242,6 +223,7 @@ function saveToHistory(entry) {
   if (history.length > 20) history = history.slice(0, 20);
   try { localStorage.setItem('nippou_history_v2', JSON.stringify(history)); } catch(e) {}
 }
+
 function loadHistory() {
   let history = [];
   try { history = JSON.parse(localStorage.getItem('nippou_history_v2') || '[]'); } catch(e) {}
@@ -254,6 +236,7 @@ function loadHistory() {
     </div>`).join('');
   window._history = history;
 }
+
 function loadEntry(i) {
   const h = window._history[i];
   document.getElementById('reportDate').value = h.date;
@@ -267,8 +250,9 @@ function loadEntry(i) {
   document.getElementById('reportOutput').textContent = h.report;
   currentReport = { date: h.date, dateLabel: h.dateLabel, site: h.site, report: h.report };
   document.getElementById('outputArea').style.display = 'block';
-  document.getElementById('gcalBtn').textContent = 'Googleカレンダーに自動登録';
-  document.getElementById('gcalBtn').disabled = false;
+  const btn = document.getElementById('mainBtn');
+  btn.textContent = 'コピー ＆ カレンダー登録';
+  btn.disabled = false;
 }
 </script>
 </body>
