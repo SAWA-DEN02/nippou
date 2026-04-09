@@ -235,7 +235,9 @@ function render() {
   const prevLast = new Date(y, m, 0).getDate();
   let html = '';
   let day = 1, nextDay = 1;
-  for (let i = 0; i < 42; i++) {
+  const totalDays = firstDay + lastDate;
+  const totalCells = Math.ceil(totalDays / 7) * 7;
+  for (let i = 0; i < totalCells; i++) {
     const col = i % 7;
     let num = '', cls = '', dateStr = '';
     if (i < firstDay) {
