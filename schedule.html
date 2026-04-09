@@ -12,8 +12,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a1a; color: #fff; min-height: 100vh; position: relative; overflow-x: hidden; }
 .circuit-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-.container { padding: 16px; max-width: 480px; margin: auto; position: relative; z-index: 1; }
-.top-title { text-align: center; padding: 20px 0 12px; }
+.container { padding: 8px 16px 16px; max-width: 480px; margin: auto; position: relative; z-index: 1; }
+.top-title { text-align: center; padding: 8px 0 6px; }
 .top-title .badge { display: inline-block; border: 1px solid #1D9E75; color: #1D9E75; font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 99px; letter-spacing: 0.1em; margin-bottom: 6px; text-shadow: 0 0 6px #1D9E75; box-shadow: 0 0 8px rgba(29,158,117,0.4); }
 .top-title .title { font-size: 15px; font-weight: 700; color: #fff; text-shadow: 0 0 10px rgba(29,158,117,0.8); }
 .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -28,7 +28,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .weekday.sun { color: #ef9a9a; }
 .weekday.sat { color: #90caf9; }
 .calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
-.day { background: rgba(255,255,255,0.05); border-radius: 8px; padding: 4px; min-height: 88px; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; min-width: 0; }
+.day { background: rgba(255,255,255,0.05); border-radius: 8px; padding: 4px; min-height: 110px; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; min-width: 0; }
 .day:active { background: rgba(29,158,117,0.15); }
 .day.today { border-color: #1D9E75; box-shadow: 0 0 8px rgba(29,158,117,0.3); }
 .day.other-month { background: rgba(255,255,255,0.02); }
