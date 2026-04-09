@@ -4,86 +4,104 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="現場予定表">
 <meta name="theme-color" content="#0a0a1a">
 <title>現場予定表</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; }
-.top-header { background: #0a0a1a; padding: 24px 16px 20px; position: relative; overflow: hidden; text-align: center; }
-.top-header .circuit { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-.top-header .title { font-size: 20px; font-weight: 700; color: #fff; position: relative; z-index: 1; text-shadow: 0 0 10px rgba(29,158,117,0.8); }
-.top-header .badge { display: inline-block; border: 1px solid #1D9E75; color: #1D9E75; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 99px; letter-spacing: 0.1em; margin-bottom: 8px; position: relative; z-index: 1; text-shadow: 0 0 6px #1D9E75; box-shadow: 0 0 8px rgba(29,158,117,0.4); }
-.container { padding: 16px; max-width: 480px; margin: auto; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a1a; color: #fff; min-height: 100vh; position: relative; overflow-x: hidden; }
+.circuit-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.container { padding: 16px; max-width: 480px; margin: auto; position: relative; z-index: 1; }
+.top-title { text-align: center; padding: 20px 0 12px; }
+.top-title .badge { display: inline-block; border: 1px solid #1D9E75; color: #1D9E75; font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 99px; letter-spacing: 0.1em; margin-bottom: 6px; text-shadow: 0 0 6px #1D9E75; box-shadow: 0 0 8px rgba(29,158,117,0.4); }
+.top-title .title { font-size: 15px; font-weight: 700; color: #fff; text-shadow: 0 0 10px rgba(29,158,117,0.8); }
 .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .month-nav { display: flex; align-items: center; gap: 12px; }
-.nav-btn { background: #fff; border: 1px solid #ddd; border-radius: 10px; width: 40px; height: 40px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
-.nav-btn:active { background: #f0f0f0; }
-.month-label { font-size: 17px; font-weight: 600; color: #1a1a1a; min-width: 110px; text-align: center; }
-.add-btn { background: #1D9E75; border: none; border-radius: 10px; width: 40px; height: 40px; cursor: pointer; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; }
+.nav-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(29,158,117,0.4); border-radius: 10px; width: 40px; height: 40px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; color: #1D9E75; }
+.nav-btn:active { background: rgba(29,158,117,0.2); }
+.month-label { font-size: 17px; font-weight: 600; color: #fff; min-width: 110px; text-align: center; text-shadow: 0 0 8px rgba(29,158,117,0.6); }
+.add-btn { background: #1D9E75; border: none; border-radius: 10px; width: 40px; height: 40px; cursor: pointer; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(29,158,117,0.5); }
 .add-btn:active { opacity: 0.8; }
-.weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 4px; }
-.weekday { text-align: center; font-size: 11px; font-weight: 600; color: #999; padding: 4px 0; }
-.weekday.sun { color: #e53935; }
-.weekday.sat { color: #1565C0; }
+.weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; margin-bottom: 4px; }
+.weekday { text-align: center; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); padding: 4px 0; }
+.weekday.sun { color: #ef9a9a; }
+.weekday.sat { color: #90caf9; }
 .calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
-.day { background: #fff; border-radius: 8px; padding: 4px; min-height: 72px; cursor: pointer; border: 1px solid #eee; overflow: hidden; min-width: 0; }
-.day:active { opacity: 0.8; }
-.day.today { border-color: #1D9E75; }
-.day.other-month { background: #f9f9f9; }
-.day .day-num { font-size: 12px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px; }
-.day.today .day-num { color: #1D9E75; }
-.day.sun .day-num { color: #e53935; }
-.day.sat .day-num { color: #1565C0; }
-.day.holiday .day-num { color: #e53935; }
-.day.other-month .day-num { color: #ccc; }
-.holiday-name { font-size: 8px; color: #e53935; font-weight: 500; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.day { background: rgba(255,255,255,0.05); border-radius: 8px; padding: 4px; min-height: 88px; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; min-width: 0; }
+.day:active { background: rgba(29,158,117,0.15); }
+.day.today { border-color: #1D9E75; box-shadow: 0 0 8px rgba(29,158,117,0.3); }
+.day.other-month { background: rgba(255,255,255,0.02); }
+.day .day-num { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 2px; }
+.day.today .day-num { color: #1D9E75; text-shadow: 0 0 6px rgba(29,158,117,0.8); }
+.day.sun .day-num { color: #ef9a9a; }
+.day.sat .day-num { color: #90caf9; }
+.day.holiday .day-num { color: #ef9a9a; }
+.day.other-month .day-num { color: rgba(255,255,255,0.2); }
+.holiday-name { font-size: 8px; color: #ef9a9a; font-weight: 500; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .event { border-radius: 4px; padding: 2px 4px; font-size: 9px; font-weight: 500; margin-bottom: 2px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block; }
-.legend { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
-.legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #666; }
+.more { font-size: 8px; color: rgba(255,255,255,0.4); }
+.legend { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; padding-bottom: 24px; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: rgba(255,255,255,0.6); }
 .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
-.modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; align-items: flex-end; }
+.modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; align-items: flex-end; }
 .modal-bg.show { display: flex; }
-.modal { background: #fff; border-radius: 20px 20px 0 0; padding: 20px 16px 40px; width: 100%; }
-.modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
-.modal-date { font-size: 14px; color: #666; margin-bottom: 16px; }
-.modal label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; font-weight: 500; }
-.modal select, .modal input { width: 100%; padding: 13px 14px; border: 1px solid #ddd; border-radius: 12px; background: #fff; color: #1a1a1a; font-size: 16px; font-family: inherit; appearance: none; -webkit-appearance: none; margin-bottom: 12px; }
+.modal { background: #1a1a2e; border-radius: 20px 20px 0 0; padding: 20px 16px 40px; width: 100%; border-top: 1px solid rgba(29,158,117,0.4); }
+.modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #fff; }
+.modal-date { font-size: 13px; color: #1D9E75; margin-bottom: 16px; }
+.modal label { display: block; font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 5px; font-weight: 500; }
+.modal select, .modal input { width: 100%; padding: 13px 14px; border: 1px solid rgba(29,158,117,0.3); border-radius: 12px; background: rgba(255,255,255,0.08); color: #fff; font-size: 16px; font-family: inherit; appearance: none; -webkit-appearance: none; margin-bottom: 12px; }
+.modal select option { background: #1a1a2e; color: #fff; }
 .modal-btns { display: flex; gap: 10px; margin-top: 8px; }
-.modal-btn { flex: 1; padding: 14px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 600; border: 1px solid #ddd; background: #fff; color: #1a1a1a; text-align: center; }
-.modal-btn.primary { background: #1D9E75; border-color: #0F6E56; color: #fff; }
+.modal-btn { flex: 1; padding: 14px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 600; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; text-align: center; }
+.modal-btn.primary { background: #1D9E75; border-color: #0F6E56; color: #fff; box-shadow: 0 0 10px rgba(29,158,117,0.4); }
 .modal-btn:active { opacity: 0.8; }
-.event-list { margin-top: 16px; }
-.event-item { background: #f5f5f5; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
-.event-item .info { font-size: 14px; color: #1a1a1a; }
-.event-item .sub { font-size: 12px; color: #666; margin-top: 2px; }
-.event-item .del { background: none; border: none; color: #e53935; font-size: 18px; cursor: pointer; padding: 4px; }
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 12px 28px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; color: #fff; background: #1D9E75; }
+.event-list { margin-top: 12px; }
+.event-item { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.08); }
+.event-item .info { font-size: 14px; color: #fff; }
+.event-item .sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+.event-item .del { background: none; border: none; color: #ef9a9a; font-size: 18px; cursor: pointer; padding: 4px; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 12px 28px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; color: #fff; background: #1D9E75; box-shadow: 0 0 12px rgba(29,158,117,0.5); }
 .toast.show { opacity: 1; }
 .select-wrap { position: relative; margin-bottom: 12px; }
 .select-wrap select { margin-bottom: 0; }
-.select-wrap .arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #999; }
+.select-wrap .arrow { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #1D9E75; }
 </style>
 </head>
 <body>
 
-<div class="top-header">
-  <svg class="circuit" viewBox="0 0 400 80" xmlns="http://www.w3.org/2000/svg">
-    <line x1="0" y1="20" x2="60" y2="20" stroke="#1D9E75" stroke-width="1" opacity="0.4"/>
-    <line x1="60" y1="20" x2="60" y2="50" stroke="#1D9E75" stroke-width="1" opacity="0.4"/>
-    <circle cx="60" cy="20" r="2" fill="#1D9E75" opacity="0.6"/>
-    <line x1="340" y1="15" x2="400" y2="15" stroke="#1D9E75" stroke-width="1" opacity="0.4"/>
-    <line x1="340" y1="15" x2="340" y2="60" stroke="#1D9E75" stroke-width="1" opacity="0.4"/>
-    <circle cx="340" cy="15" r="2" fill="#1D9E75" opacity="0.6"/>
-    <rect x="100" y="30" width="12" height="6" rx="1" fill="none" stroke="#1D9E75" stroke-width="1" opacity="0.4"/>
-    <rect x="288" y="40" width="12" height="6" rx="1" fill="none" stroke="#1D9E75" stroke-width="1" opacity="0.4"/>
-  </svg>
-  <div class="badge">⚡ ELECTRICAL WORK</div>
-  <div class="title">現場予定表</div>
-</div>
+<svg class="circuit-bg" viewBox="0 0 400 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+  <line x1="0" y1="40" x2="70" y2="40" stroke="#1D9E75" stroke-width="1" opacity="0.3"/>
+  <line x1="70" y1="40" x2="70" y2="100" stroke="#1D9E75" stroke-width="1" opacity="0.3"/>
+  <line x1="70" y1="100" x2="140" y2="100" stroke="#1D9E75" stroke-width="1" opacity="0.3"/>
+  <circle cx="70" cy="40" r="2.5" fill="#1D9E75" opacity="0.5"/>
+  <circle cx="70" cy="100" r="2.5" fill="#1D9E75" opacity="0.5"/>
+  <circle cx="140" cy="100" r="2.5" fill="#1D9E75" opacity="0.5"/>
+  <rect x="128" y="93" width="16" height="8" rx="1.5" fill="none" stroke="#1D9E75" stroke-width="1" opacity="0.4"/>
+  <line x1="330" y1="30" x2="400" y2="30" stroke="#1D9E75" stroke-width="1" opacity="0.3"/>
+  <line x1="330" y1="30" x2="330" y2="90" stroke="#1D9E75" stroke-width="1" opacity="0.3"/>
+  <line x1="270" y1="90" x2="330" y2="90" stroke="#1D9E75" stroke-width="1" opacity="0.3"/>
+  <circle cx="330" cy="30" r="2.5" fill="#1D9E75" opacity="0.5"/>
+  <circle cx="330" cy="90" r="2.5" fill="#1D9E75" opacity="0.5"/>
+  <rect x="258" y="83" width="16" height="8" rx="1.5" fill="none" stroke="#1D9E75" stroke-width="1" opacity="0.4"/>
+  <line x1="0" y1="300" x2="50" y2="300" stroke="#1D9E75" stroke-width="1" opacity="0.2"/>
+  <line x1="50" y1="300" x2="50" y2="360" stroke="#1D9E75" stroke-width="1" opacity="0.2"/>
+  <circle cx="50" cy="300" r="2" fill="#1D9E75" opacity="0.3"/>
+  <line x1="350" y1="400" x2="400" y2="400" stroke="#1D9E75" stroke-width="1" opacity="0.2"/>
+  <circle cx="350" cy="400" r="2" fill="#1D9E75" opacity="0.3"/>
+  <line x1="0" y1="600" x2="80" y2="600" stroke="#1D9E75" stroke-width="1" opacity="0.15"/>
+  <line x1="80" y1="600" x2="80" y2="650" stroke="#1D9E75" stroke-width="1" opacity="0.15"/>
+  <circle cx="80" cy="600" r="2" fill="#1D9E75" opacity="0.2"/>
+  <line x1="300" y1="700" x2="400" y2="700" stroke="#1D9E75" stroke-width="1" opacity="0.15"/>
+  <circle cx="300" cy="700" r="2" fill="#1D9E75" opacity="0.2"/>
+</svg>
 
 <div class="container">
+  <div class="top-title">
+    <div class="badge">⚡ ELECTRICAL WORK</div>
+    <div class="title">現場予定表</div>
+  </div>
+
   <div class="header">
     <div class="month-nav">
       <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
@@ -107,10 +125,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   <div class="legend" id="legend"></div>
 </div>
 
-<!-- 予定追加モーダル -->
 <div class="modal-bg" id="modalBg" onclick="closeModal(event)">
   <div class="modal">
-    <h3 id="modalTitle">予定を追加</h3>
+    <h3>予定を追加</h3>
     <div class="modal-date" id="modalDate"></div>
     <label>現場名</label>
     <div class="select-wrap">
@@ -154,10 +171,10 @@ const holidays = {
 };
 
 const workerColors = [
-  { bg: '#E1F5EE', text: '#0F6E56', border: '#1D9E75' },
-  { bg: '#E3F2FD', text: '#1565C0', border: '#1565C0' },
-  { bg: '#FFF3E0', text: '#E65100', border: '#FF9800' },
-  { bg: '#FCE4EC', text: '#880E4F', border: '#E91E63' },
+  { bg: 'rgba(29,158,117,0.25)', text: '#4ecca3', border: '#1D9E75' },
+  { bg: 'rgba(21,101,192,0.25)', text: '#90caf9', border: '#1565C0' },
+  { bg: 'rgba(230,81,0,0.25)', text: '#ffcc80', border: '#FF9800' },
+  { bg: 'rgba(136,14,79,0.25)', text: '#f48fb1', border: '#E91E63' },
 ];
 
 let current = new Date();
@@ -235,12 +252,12 @@ function render() {
     } else { num = nextDay++; cls = 'other-month'; }
 
     const holidayName = holidays[dateStr] ? `<div class="holiday-name">${holidays[dateStr]}</div>` : '';
-    const dayEvents = (events[dateStr] || []).slice(0, 2);
-    const evHtml = dayEvents.map(e => {
+    const dayEvents = events[dateStr] || [];
+    const evHtml = dayEvents.slice(0, 2).map(e => {
       const c = getWorkerColor(e.worker);
       return `<div class="event" style="background:${c.bg};color:${c.text};">${e.site}</div>`;
     }).join('');
-    const more = (events[dateStr] || []).length > 2 ? `<div style="font-size:8px;color:#999;">+${(events[dateStr]||[]).length - 2}件</div>` : '';
+    const more = dayEvents.length > 2 ? `<div class="more">+${dayEvents.length - 2}</div>` : '';
     const click = dateStr ? `onclick="openDayModal('${dateStr}')"` : '';
     html += `<div class="day ${cls}" ${click}><div class="day-num">${num}</div>${holidayName}${evHtml}${more}</div>`;
   }
@@ -249,17 +266,13 @@ function render() {
 
 function openAddModal(date) {
   selectedDate = date || '';
-  document.getElementById('modalTitle').textContent = date ? `予定を追加` : '予定を追加';
   document.getElementById('modalDate').textContent = date ? formatDate(date) : '';
-
   const siteSel = document.getElementById('modalSite');
   siteSel.innerHTML = '<option value="">選択してください</option>';
   sites.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; siteSel.appendChild(o); });
-
   const workerSel = document.getElementById('modalWorker');
   workerSel.innerHTML = '<option value="">選択してください</option>';
   workers.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; workerSel.appendChild(o); });
-
   document.getElementById('modalMemo').value = '';
   renderEventList(date);
   document.getElementById('modalBg').classList.add('show');
@@ -283,7 +296,7 @@ function renderEventList(date) {
   if (!date) { el.innerHTML = ''; return; }
   const dayEvents = events[date] || [];
   if (dayEvents.length === 0) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div style="font-size:12px;color:#666;margin-bottom:8px;">この日の予定</div>' +
+  el.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:8px;">この日の予定</div>' +
     dayEvents.map((e, i) => {
       const c = getWorkerColor(e.worker);
       return `<div class="event-item">
