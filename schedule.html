@@ -385,20 +385,4 @@ function addEvent() {
 }
 
 function deleteEvent(date, idx) {
-  events[date].splice(idx, 1);
-  if (events[date].length === 0) delete events[date];
-  saveEvents();
-  renderScheduleList(date);
-  render();
-}
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
-}
-
-loadData();
-</script>
-</body>
-</html>
+  ev
