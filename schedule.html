@@ -208,14 +208,10 @@ let workers = [];
 
 async function loadData() {
   try {
-    const [sRes, wRes] = await Promise.all([
-      fetch(GAS_URL + '?type=sites'),
-      fetch(GAS_URL + '?type=workers')
-    ]);
-    const sData = await sRes.json();
-    const wData = await wRes.json();
-    if (sData.status === 'ok') sites = sData.data;
-    if (wData.status === 'ok') workers = wData.data;
+    const cachedSites = localStorage.getItem('cache_sites');
+    const cachedWorkers = localStorage.getItem('cache_workers');
+    if (cachedSites) sites = JSON.parse(cachedSites);
+    if (cachedWorkers) workers = JSON.parse(cachedWorkers);
   } catch(e) {}
   try {
     const saved = localStorage.getItem('schedule_events');
@@ -223,6 +219,27 @@ async function loadData() {
   } catch(e) {}
   renderLegend();
   render();
+  fetchLatest();
+}
+
+async function fetchLatest() {
+  try {
+    const [sRes, wRes] = await Promise.all([
+      fetch(GAS_URL + '?type=sites'),
+      fetch(GAS_URL + '?type=workers')
+    ]);
+    const sData = await sRes.json();
+    const wData = await wRes.json();
+    if (sData.status === 'ok') {
+      sites = sData.data;
+      localStorage.setItem('cache_sites', JSON.stringify(sites));
+    }
+    if (wData.status === 'ok') {
+      workers = wData.data;
+      localStorage.setItem('cache_workers', JSON.stringify(workers));
+    }
+    renderLegend();
+  } catch(e) {}
 }
 
 function saveEvents() {
