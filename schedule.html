@@ -43,7 +43,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: rgba(255,255,255,0.6); }
 .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
 
-/* 日付詳細モーダル */
 .modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; align-items: flex-end; }
 .modal-bg.show { display: flex; }
 .modal { background: #1a1a2e; border-radius: 20px 20px 0 0; padding: 20px 16px 40px; width: 100%; border-top: 1px solid rgba(29,158,117,0.4); max-height: 85vh; overflow-y: auto; }
@@ -58,19 +57,26 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .schedule-item .info .worker { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 3px; }
 .schedule-item .info .memo { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 2px; }
 .schedule-item .del { background: none; border: none; color: #ef9a9a; font-size: 20px; cursor: pointer; padding: 4px; flex-shrink: 0; }
-
-/* 予定追加フォーム */
-.add-form { display: none; background: rgba(255,255,255,0.04); border-radius: 14px; padding: 14px; border: 1px solid rgba(29,158,117,0.3); margin-bottom: 12px; }
-.add-form.show { display: block; }
-.add-form label { display: block; font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 5px; font-weight: 500; }
-.add-form select, .add-form input { width: 100%; padding: 13px 14px; border: 1px solid rgba(29,158,117,0.3); border-radius: 12px; background: rgba(255,255,255,0.08); color: #fff; font-size: 16px; font-family: inherit; appearance: none; -webkit-appearance: none; margin-bottom: 10px; }
-.add-form select option { background: #1a1a2e; color: #fff; }
-.form-btns { display: flex; gap: 8px; }
-.form-btn { flex: 1; padding: 12px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; text-align: center; }
-.form-btn.primary { background: #1D9E75; border-color: #0F6E56; color: #fff; }
-.form-btn:active { opacity: 0.8; }
 .open-form-btn { width: 100%; padding: 14px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 600; border: 1px solid rgba(29,158,117,0.5); background: rgba(29,158,117,0.1); color: #1D9E75; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .open-form-btn:active { background: rgba(29,158,117,0.2); }
+
+.add-modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; align-items: flex-end; }
+.add-modal-bg.show { display: flex; }
+.add-modal { background: #1a1a2e; border-radius: 20px 20px 0 0; padding: 20px 16px 40px; width: 100%; border-top: 1px solid rgba(29,158,117,0.4); max-height: 85vh; overflow-y: auto; }
+.add-modal h3 { font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.add-modal-date { font-size: 13px; color: #1D9E75; margin-bottom: 16px; }
+.field-label { display: block; font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 6px; font-weight: 500; }
+.field-select { width: 100%; padding: 13px 14px; border: 1px solid rgba(29,158,117,0.3); border-radius: 12px; background: rgba(255,255,255,0.08); color: #fff; font-size: 16px; font-family: inherit; appearance: none; -webkit-appearance: none; margin-bottom: 12px; }
+.field-select option { background: #1a1a2e; color: #fff; }
+.field-input { width: 100%; padding: 13px 14px; border: 1px solid rgba(29,158,117,0.3); border-radius: 12px; background: rgba(255,255,255,0.08); color: #fff; font-size: 16px; font-family: inherit; margin-bottom: 12px; }
+.worker-pills { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.worker-pill { padding: 13px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); font-size: 15px; cursor: pointer; text-align: left; width: 100%; }
+.worker-pill.active { background: rgba(29,158,117,0.25); border-color: #1D9E75; color: #4ecca3; font-weight: 500; }
+.worker-pill:active { opacity: 0.7; }
+.form-btns { display: flex; gap: 8px; margin-top: 4px; }
+.form-btn { flex: 1; padding: 14px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 600; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; text-align: center; }
+.form-btn.primary { background: #1D9E75; border-color: #0F6E56; color: #fff; }
+.form-btn:active { opacity: 0.8; }
 
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 12px 28px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; color: #fff; background: #1D9E75; box-shadow: 0 0 12px rgba(29,158,117,0.5); }
 .toast.show { opacity: 1; }
@@ -109,7 +115,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="badge">⚡ ELECTRICAL WORK</div>
     <div class="title">現場予定表</div>
   </div>
-
   <div class="header">
     <div class="month-nav">
       <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
@@ -117,7 +122,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <button class="nav-btn" onclick="changeMonth(1)">›</button>
     </div>
   </div>
-
   <div class="weekdays">
     <div class="weekday sun">日</div>
     <div class="weekday">月</div>
@@ -127,42 +131,46 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="weekday">金</div>
     <div class="weekday sat">土</div>
   </div>
-
   <div class="calendar" id="calendar"></div>
   <div class="legend" id="legend"></div>
 </div>
 
-<!-- 日付詳細モーダル -->
-<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+<!-- 予定一覧モーダル -->
+<div class="modal-bg" id="modalBg" onclick="closeDayModal(event)">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title" id="modalTitle"></div>
-      <button class="modal-close" onclick="closeModalDirect()">×</button>
+      <button class="modal-close" onclick="closeDayModalDirect()">×</button>
     </div>
     <div class="modal-date" id="modalDate"></div>
-
-    <!-- 予定一覧 -->
     <div class="schedule-list" id="scheduleList"></div>
+    <button class="open-form-btn" onclick="openAddModal()">＋ 予定を追加</button>
+  </div>
+</div>
 
-    <!-- 予定追加ボタン -->
-    <button class="open-form-btn" id="openFormBtn" onclick="toggleForm()">＋ 予定を追加</button>
+<!-- 予定追加モーダル -->
+<div class="add-modal-bg" id="addModalBg" onclick="closeAddModal(event)">
+  <div class="add-modal">
+    <div class="modal-header">
+      <h3>予定を追加</h3>
+      <button class="modal-close" onclick="closeAddModalDirect()">×</button>
+    </div>
+    <div class="add-modal-date" id="addModalDate"></div>
 
-    <!-- 予定追加フォーム -->
-    <div class="add-form" id="addForm">
-      <label>現場名</label>
-      <select id="modalSite">
-        <option value="">選択してください</option>
-      </select>
-      <label>作業者</label>
-      <select id="modalWorker">
-        <option value="">選択してください</option>
-      </select>
-      <label>メモ（任意）</label>
-      <input type="text" id="modalMemo" placeholder="例：午前のみ">
-      <div class="form-btns">
-        <button class="form-btn" onclick="toggleForm()">キャンセル</button>
-        <button class="form-btn primary" onclick="addEvent()">追加する</button>
-      </div>
+    <label class="field-label">現場名</label>
+    <select class="field-select" id="addSite">
+      <option value="">選択してください</option>
+    </select>
+
+    <label class="field-label">作業者（複数選択可）</label>
+    <div class="worker-pills" id="addWorkerPills"></div>
+
+    <label class="field-label">メモ（任意）</label>
+    <input type="text" class="field-input" id="addMemo" placeholder="例：午前のみ">
+
+    <div class="form-btns">
+      <button class="form-btn" onclick="closeAddModalDirect()">キャンセル</button>
+      <button class="form-btn primary" onclick="addEvent()">追加する</button>
     </div>
   </div>
 </div>
@@ -193,6 +201,7 @@ const workerColors = [
 
 let current = new Date();
 let selectedDate = '';
+let selectedWorkers = [];
 let events = {};
 let sites = [];
 let workers = [];
@@ -270,7 +279,8 @@ function render() {
     const holidayName = holidays[dateStr] ? `<div class="holiday-name">${holidays[dateStr]}</div>` : '';
     const dayEvents = events[dateStr] || [];
     const evHtml = dayEvents.slice(0, 2).map(e => {
-      const c = getWorkerColor(e.worker);
+      const firstWorker = (e.workers || [e.worker])[0];
+      const c = getWorkerColor(firstWorker);
       return `<div class="event" style="background:${c.bg};color:${c.text};">${e.site}</div>`;
     }).join('');
     const more = dayEvents.length > 2 ? `<div class="more">+${dayEvents.length - 2}</div>` : '';
@@ -280,6 +290,12 @@ function render() {
   document.getElementById('calendar').innerHTML = html;
 }
 
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const wd = ['日','月','火','水','木','金','土'][d.getDay()];
+  return `${d.getMonth()+1}月${d.getDate()}日（${wd}）`;
+}
+
 function openDayModal(date) {
   selectedDate = date;
   const d = new Date(date + 'T00:00:00');
@@ -287,36 +303,15 @@ function openDayModal(date) {
   document.getElementById('modalTitle').textContent = `${d.getMonth()+1}月${d.getDate()}日（${wd}）`;
   const holiday = holidays[date];
   document.getElementById('modalDate').textContent = holiday ? `🎌 ${holiday}` : '';
-
-  const siteSel = document.getElementById('modalSite');
-  siteSel.innerHTML = '<option value="">選択してください</option>';
-  sites.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; siteSel.appendChild(o); });
-
-  const workerSel = document.getElementById('modalWorker');
-  workerSel.innerHTML = '<option value="">選択してください</option>';
-  workers.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; workerSel.appendChild(o); });
-
-  document.getElementById('modalMemo').value = '';
-  document.getElementById('addForm').classList.remove('show');
-  document.getElementById('openFormBtn').style.display = 'flex';
-
   renderScheduleList(date);
   document.getElementById('modalBg').classList.add('show');
 }
 
-function toggleForm() {
-  const form = document.getElementById('addForm');
-  const btn = document.getElementById('openFormBtn');
-  if (form.classList.contains('show')) {
-    form.classList.remove('show');
-    btn.style.display = 'flex';
-  } else {
-    form.classList.add('show');
-    btn.style.display = 'none';
-    document.getElementById('modalSite').value = '';
-    document.getElementById('modalWorker').value = '';
-    document.getElementById('modalMemo').value = '';
-  }
+function closeDayModal(e) {
+  if (e.target === document.getElementById('modalBg')) closeDayModalDirect();
+}
+function closeDayModalDirect() {
+  document.getElementById('modalBg').classList.remove('show');
 }
 
 function renderScheduleList(date) {
@@ -327,11 +322,13 @@ function renderScheduleList(date) {
     return;
   }
   el.innerHTML = dayEvents.map((e, i) => {
-    const c = getWorkerColor(e.worker);
+    const workerList = e.workers || [e.worker];
+    const firstWorker = workerList[0];
+    const c = getWorkerColor(firstWorker);
     return `<div class="schedule-item">
       <div class="info">
         <div class="site" style="color:${c.text};">${e.site}</div>
-        <div class="worker">${e.worker}</div>
+        <div class="worker">${workerList.join('、')}</div>
         ${e.memo ? `<div class="memo">${e.memo}</div>` : ''}
       </div>
       <button class="del" onclick="deleteEvent('${date}', ${i})">✕</button>
@@ -339,18 +336,51 @@ function renderScheduleList(date) {
   }).join('');
 }
 
+function openAddModal() {
+  selectedWorkers = [];
+  document.getElementById('addModalDate').textContent = formatDate(selectedDate);
+
+  const siteSel = document.getElementById('addSite');
+  siteSel.innerHTML = '<option value="">選択してください</option>';
+  sites.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; siteSel.appendChild(o); });
+
+  const pillsEl = document.getElementById('addWorkerPills');
+  pillsEl.innerHTML = workers.length === 0
+    ? '<div style="font-size:13px;color:rgba(255,255,255,0.3);">作業者が登録されていません</div>'
+    : workers.map(w => `<button class="worker-pill" onclick="toggleWorker(this,'${w}')">${w}</button>`).join('');
+
+  document.getElementById('addMemo').value = '';
+  document.getElementById('addModalBg').classList.add('show');
+}
+
+function toggleWorker(el, name) {
+  if (selectedWorkers.includes(name)) {
+    selectedWorkers = selectedWorkers.filter(w => w !== name);
+    el.classList.remove('active');
+  } else {
+    selectedWorkers.push(name);
+    el.classList.add('active');
+  }
+}
+
+function closeAddModal(e) {
+  if (e.target === document.getElementById('addModalBg')) closeAddModalDirect();
+}
+function closeAddModalDirect() {
+  document.getElementById('addModalBg').classList.remove('show');
+}
+
 function addEvent() {
-  const site = document.getElementById('modalSite').value;
-  const worker = document.getElementById('modalWorker').value;
-  const memo = document.getElementById('modalMemo').value.trim();
+  const site = document.getElementById('addSite').value;
+  const memo = document.getElementById('addMemo').value.trim();
   if (!site) { alert('現場名を選択してください'); return; }
-  if (!worker) { alert('作業者を選択してください'); return; }
+  if (selectedWorkers.length === 0) { alert('作業者を選択してください'); return; }
   if (!events[selectedDate]) events[selectedDate] = [];
-  events[selectedDate].push({ site, worker, memo });
+  events[selectedDate].push({ site, workers: selectedWorkers, memo });
   saveEvents();
+  closeAddModalDirect();
   renderScheduleList(selectedDate);
   render();
-  toggleForm();
   showToast('予定を追加しました');
 }
 
@@ -360,14 +390,6 @@ function deleteEvent(date, idx) {
   saveEvents();
   renderScheduleList(date);
   render();
-}
-
-function closeModal(e) {
-  if (e.target === document.getElementById('modalBg')) closeModalDirect();
-}
-
-function closeModalDirect() {
-  document.getElementById('modalBg').classList.remove('show');
 }
 
 function showToast(msg) {
