@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="集計">
+<meta name="theme-color" content="#0a0a1a">
+<title>作業集計</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a1a; color: #fff; min-height: 100vh; }
+.circuit-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.container { padding: 8px 16px 40px; max-width: 480px; margin: auto; position: relative; z-index: 1; }
+.top-title { text-align: center; padding: 8px 0 6px; }
+.top-title .badge { display: inline-block; border: 1px solid #1D9E75; color: #1D9E75; font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 99px; letter-spacing: 0.1em; margin-bottom: 6px; text-shadow: 0 0 6px #1D9E75; box-shadow: 0 0 8px rgba(29,158,117,0.4); }
+.top-title .title { font-size: 15px; font-weight: 700; color: #fff; text-shadow: 0 0 10px rgba(29,158,117,0.8); }
+.month-selector { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 16px 0; }
+.nav-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(29,158,117,0.4); border-radius: 10px; width: 40px; height: 40px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; color: #1D9E75; }
+.nav-btn:active { background: rgba(29,158,117,0.2); }
+.month-label { font-size: 18px; font-weight: 600; color: #fff; min-width: 120px; text-align: center; text-shadow: 0 0 8px rgba(29,158,117,0.6); }
+.reload-btn { background: rgba(29,158,117,0.15); border: 1px solid rgba(29,158,117,0.4); border-radius: 10px; padding: 8px 16px; cursor: pointer; font-size: 13px; color: #1D9E75; margin: 0 auto 16px; display: block; }
+.reload-btn:active { background: rgba(29,158,117,0.3); }
+.section-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.4); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; margin-top: 20px; }
+.card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.card-name { font-size: 15px; font-weight: 600; color: #fff; }
+.card-total { font-size: 20px; font-weight: 700; color: #1D9E75; text-shadow: 0 0 8px rgba(29,158,117,0.5); }
+.card-total span { font-size: 12px; font-weight: 400; color: rgba(255,255,255,0.4); margin-left: 2px; }
+.detail-list { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px; }
+.detail-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.detail-item:last-child { border-bottom: none; }
+.detail-name { font-size: 13px; color: rgba(255,255,255,0.6); }
+.detail-count { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); }
+.empty { text-align: center; padding: 40px 0; font-size: 14px; color: rgba(255,255,255,0.3); }
+.loading { text-align: center; padding: 40px 0; font-size: 14px; color: #1D9E75; }
+.summary-card { background: rgba(29,158,117,0.1); border: 1px solid rgba(29,158,117,0.3); border-radius: 14px; padding: 16px; margin-bottom: 20px; display: flex; justify-content: space-around; }
+.summary-item { text-align: center; }
+.summary-num { font-size: 28px; font-weight: 700; color: #1D9E75; text-shadow: 0 0 10px rgba(29,158,117,0.5); }
+.summary-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<svg class="circuit-bg" viewBox="0 0 400 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+  <line x1="0" y1="40" x2="70" y2="40" stroke="#1D9E75" stroke-width="1" opacity="0.3"/>
+  <line x1="70" y1="40" x2="70" y2="100" stroke="#1D9E75" stroke-width="1" opacity="0.3"/>
+  <line x1="70" y1="100" x2="140" y2="100" stroke="#1D9E75" stroke-width="1" opacity="0.3"/>
+  <circle cx="70" cy="40" r="2.5" fill="#1D9E75" opacity="0.5"/>
+  <circle cx="70" cy="100" r="2.5" fill="#1D9E75" opacity="0.5"/>
+  <circle cx="140" cy="100" r="2.5" fill="#1D9E75" opacity="0.5"/>
+  <line x1="330" y1="30" x2="400" y2="30" stroke="#1D9E75" stroke-width="1" opacity="0.3"/>
+  <line x1="330" y1="30" x2="330" y2="90" stroke="#1D9E75" stroke-width="1" opacity="0.3"/>
+  <circle cx="330" cy="30" r="2.5" fill="#1D9E75" opacity="0.5"/>
+  <line x1="0" y1="300" x2="50" y2="300" stroke="#1D9E75" stroke-width="1" opacity="0.2"/>
+  <circle cx="50" cy="300" r="2" fill="#1D9E75" opacity="0.3"/>
+  <line x1="350" y1="500" x2="400" y2="500" stroke="#1D9E75" stroke-width="1" opacity="0.2"/>
+  <circle cx="350" cy="500" r="2" fill="#1D9E75" opacity="0.3"/>
+</svg>
+
+<div class="container">
+  <div class="top-title">
+    <div class="badge">⚡ ELECTRICAL WORK</div>
+    <div class="title">作業集計</div>
+  </div>
+
+  <div class="month-selector">
+    <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+    <div class="month-label" id="monthLabel"></div>
+    <button class="nav-btn" onclick="changeMonth(1)">›</button>
+  </div>
+
+  <button class="reload-btn" onclick="loadData()">🔄 最新データを取得</button>
+
+  <div id="content"><div class="loading">読み込み中...</div></div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyFkpTdMK815NKHOgawnBzSs6CYLKudXZMunQsD2aBZG0d6FsdDZWmWIwhuii7S-AEy/exec';
+
+let current = new Date();
+let allData = [];
+
+function changeMonth(diff) {
+  current = new Date(current.getFullYear(), current.getMonth() + diff, 1);
+  render();
+}
+
+function getMonthLabel() {
+  return `${current.getFullYear()}年${current.getMonth()+1}月`;
+}
+
+async function loadData() {
+  document.getElementById('content').innerHTML = '<div class="loading">読み込み中...</div>';
+  try {
+    const res = await fetch(GAS_URL + '?type=reports');
+    const data = await res.json();
+    if (data.status === 'ok') {
+      allData = data.data;
+      localStorage.setItem('cache_reports', JSON.stringify(allData));
+    }
+  } catch(e) {
+    const cached = localStorage.getItem('cache_reports');
+    if (cached) allData = JSON.parse(cached);
+  }
+  render();
+}
+
+function render() {
+  document.getElementById('monthLabel').textContent = getMonthLabel();
+  const y = current.getFullYear();
+  const m = current.getMonth() + 1;
+  const monthStr = `${y}-${String(m).padStart(2,'0')}`;
+
+  const monthData = allData.filter(row => row.date && row.date.startsWith(monthStr));
+
+  if (monthData.length === 0) {
+    document.getElementById('content').innerHTML = '<div class="empty">この月の日報データはありません</div>';
+    return;
+  }
+
+  // 作業者別集計
+  const workerMap = {};
+  // 現場別集計
+  const siteMap = {};
+
+  monthData.forEach(row => {
+    const workers = row.workers ? row.workers.split('、') : [];
+    const site = row.site || '';
+
+    workers.forEach(w => {
+      w = w.trim();
+      if (!w) return;
+      if (!workerMap[w]) workerMap[w] = { total: 0, sites: {} };
+      workerMap[w].total++;
+      if (!workerMap[w].sites[site]) workerMap[w].sites[site] = 0;
+      workerMap[w].sites[site]++;
+    });
+
+    if (site) {
+      if (!siteMap[site]) siteMap[site] = { total: 0, workers: {} };
+      siteMap[site].total++;
+      workers.forEach(w => {
+        w = w.trim();
+        if (!w) return;
+        if (!siteMap[site].workers[w]) siteMap[site].workers[w] = 0;
+        siteMap[site].workers[w]++;
+      });
+    }
+  });
+
+  const totalDays = monthData.length;
+  const totalWorkers = Object.keys(workerMap).length;
+  const totalSites = Object.keys(siteMap).length;
+
+  let html = `
+    <div class="summary-card">
+      <div class="summary-item">
+        <div class="summary-num">${totalDays}</div>
+        <div class="summary-label">総作業日数</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-num">${totalWorkers}</div>
+        <div class="summary-label">作業者数</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-num">${totalSites}</div>
+        <div class="summary-label">現場数</div>
+      </div>
+    </div>
+
+    <div class="section-title">作業者別</div>
+  `;
+
+  Object.entries(workerMap).sort((a,b) => b[1].total - a[1].total).forEach(([name, data]) => {
+    html += `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-name">${name}</div>
+          <div class="card-total">${data.total}<span>日</span></div>
+        </div>
+        <div class="detail-list">
+          ${Object.entries(data.sites).sort((a,b) => b[1]-a[1]).map(([site, count]) =>
+            `<div class="detail-item"><div class="detail-name">${site}</div><div class="detail-count">${count}日</div></div>`
+          ).join('')}
+        </div>
+      </div>
+    `;
+  });
+
+  html += '<div class="section-title">現場別</div>';
+
+  Object.entries(siteMap).sort((a,b) => b[1].total - a[1].total).forEach(([name, data]) => {
+    html += `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-name">${name}</div>
+          <div class="card-total">${data.total}<span>日</span></div>
+        </div>
+        <div class="detail-list">
+          ${Object.entries(data.workers).sort((a,b) => b[1]-a[1]).map(([worker, count]) =>
+            `<div class="detail-item"><div class="detail-name">${worker}</div><div class="detail-count">${count}日</div></div>`
+          ).join('')}
+        </div>
+      </div>
+    `;
+  });
+
+  document.getElementById('content').innerHTML = html;
+}
+
+loadData();
+</script>
+</body>
+</html>
