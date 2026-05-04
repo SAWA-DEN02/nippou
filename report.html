@@ -281,11 +281,16 @@ function formatDate(dateStr) {
 async function deleteReport(date, site) {
   if (!confirm(`${formatDate(date)}\n${site}\n\nこの日報を削除しますか？`)) return;
   try {
-    await fetch(GAS_URL, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'deleteReport', date, site })
     });
+    const result = await res.json();
+    if (result.status !== 'ok') {
+      showToast('削除に失敗しました');
+      return;
+    }
     allData = allData.filter(r => !(String(r.date) === date && r.site === site));
     localStorage.setItem('cache_reports', JSON.stringify(allData));
     showToast('削除しました');
