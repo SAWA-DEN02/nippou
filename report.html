@@ -254,7 +254,8 @@ function renderLog(monthData) {
 
   let html = '';
   sorted.forEach((row, idx) => {
-    const dateStr = String(row.date || '');
+    const rawDate = row.date || '';
+    const dateStr = String(rawDate).substring(0, 10);
     const dateLabel = formatDate(dateStr);
     html += `
       <div class="log-item">
