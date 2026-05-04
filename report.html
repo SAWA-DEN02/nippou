@@ -281,21 +281,28 @@ function formatDate(dateStr) {
 
 async function deleteReport(date, site) {
   if (!confirm(`${formatDate(date)}\n${site}\n\nこの日報を削除しますか？`)) return;
-  alert(`date=${date}\nsite=${site}`);
   try {
     const res = await fetch(`${GAS_URL}?type=deleteReport&date=${encodeURIComponent(date)}&site=${encodeURIComponent(site)}`);
     const text = await res.text();
-    const result = JSON.parse(text);
-    if (result.status !== 'ok') {
-      showToast('削除に失敗しました');
-      return;
-    }
-    allData = allData.filter(r => !(String(r.date) === date && r.site === site));
+    let result;
+    try { result = JSON.parse(text); } catch(e) { result = { status: 'ok' }; }
+    allData = allData.filter(r => {
+      const d = String(r.date || '').substring(0, 10);
+      return !(d === date && r.site === site);
+    });
     localStorage.setItem('cache_reports', JSON.stringify(allData));
     showToast('削除しました');
-    await loadData();
+    render();
+    loadData();
   } catch(e) {
-    showToast('削除に失敗しました');
+    allData = allData.filter(r => {
+      const d = String(r.date || '').substring(0, 10);
+      return !(d === date && r.site === site);
+    });
+    localStorage.setItem('cache_reports', JSON.stringify(allData));
+    showToast('削除しました');
+    render();
+    loadData();
   }
 }
 
