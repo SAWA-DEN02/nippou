@@ -284,7 +284,8 @@ async function deleteReport(date, site) {
   alert(`date=${date}\nsite=${site}`);
   try {
     const res = await fetch(`${GAS_URL}?type=deleteReport&date=${encodeURIComponent(date)}&site=${encodeURIComponent(site)}`);
-    const result = await res.json();
+    const text = await res.text();
+    const result = JSON.parse(text);
     if (result.status !== 'ok') {
       showToast('削除に失敗しました');
       return;
