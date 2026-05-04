@@ -289,7 +289,7 @@ async function deleteReport(date, site) {
     allData = allData.filter(r => !(String(r.date) === date && r.site === site));
     localStorage.setItem('cache_reports', JSON.stringify(allData));
     showToast('削除しました');
-    render();
+    await loadData();
   } catch(e) {
     showToast('削除に失敗しました');
   }
