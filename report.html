@@ -280,6 +280,7 @@ function formatDate(dateStr) {
 
 async function deleteReport(date, site) {
   if (!confirm(`${formatDate(date)}\n${site}\n\nこの日報を削除しますか？`)) return;
+  alert(`date=${date}\nsite=${site}`);
   try {
     const res = await fetch(`${GAS_URL}?type=deleteReport&date=${encodeURIComponent(date)}&site=${encodeURIComponent(site)}`);
     const result = await res.json();
