@@ -21,7 +21,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .month-label { font-size: 18px; font-weight: 600; color: #fff; min-width: 120px; text-align: center; text-shadow: 0 0 8px rgba(29,158,117,0.6); }
 .reload-btn { background: rgba(29,158,117,0.15); border: 1px solid rgba(29,158,117,0.4); border-radius: 10px; padding: 8px 16px; cursor: pointer; font-size: 13px; color: #1D9E75; margin: 0 auto 16px; display: block; }
 .reload-btn:active { background: rgba(29,158,117,0.3); }
-.section-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.4); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; margin-top: 20px; }
+.section-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.4); letter-spacing: 0.08em; margin-bottom: 10px; margin-top: 20px; }
 .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
 .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .card-name { font-size: 15px; font-weight: 600; color: #fff; }
@@ -38,6 +38,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .summary-item { text-align: center; }
 .summary-num { font-size: 28px; font-weight: 700; color: #1D9E75; text-shadow: 0 0 10px rgba(29,158,117,0.5); }
 .summary-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+.tab-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.tab { flex: 1; padding: 10px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); text-align: center; }
+.tab.active { background: rgba(29,158,117,0.2); border-color: #1D9E75; color: #1D9E75; }
+.tab:active { opacity: 0.8; }
+.log-item { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+.log-info .log-date { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 3px; }
+.log-info .log-site { font-size: 15px; font-weight: 600; color: #fff; }
+.log-info .log-worker { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+.log-del { background: none; border: 1px solid rgba(239,154,154,0.3); border-radius: 8px; color: #ef9a9a; font-size: 13px; cursor: pointer; padding: 6px 10px; flex-shrink: 0; }
+.log-del:active { background: rgba(239,154,154,0.1); }
 </style>
 </head>
 <body>
@@ -72,17 +82,32 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
   <button class="reload-btn" onclick="loadData()">🔄 最新データを取得</button>
 
+  <div class="tab-row">
+    <div class="tab active" id="tab-summary" onclick="switchTab('summary')">集計</div>
+    <div class="tab" id="tab-log" onclick="switchTab('log')">日報一覧</div>
+  </div>
+
   <div id="content"><div class="loading">読み込み中...</div></div>
 </div>
+
+<div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 28px;border-radius:99px;font-size:14px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;white-space:nowrap;color:#fff;background:#1D9E75;"></div>
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyFkpTdMK815NKHOgawnBzSs6CYLKudXZMunQsD2aBZG0d6FsdDZWmWIwhuii7S-AEy/exec';
 
 let current = new Date();
 let allData = [];
+let currentTab = 'summary';
 
 function changeMonth(diff) {
   current = new Date(current.getFullYear(), current.getMonth() + diff, 1);
+  render();
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-summary').classList.toggle('active', tab === 'summary');
+  document.getElementById('tab-log').classList.toggle('active', tab === 'log');
   render();
 }
 
@@ -106,28 +131,39 @@ async function loadData() {
   render();
 }
 
-function render() {
-  document.getElementById('monthLabel').textContent = getMonthLabel();
+function getMonthData() {
   const y = current.getFullYear();
   const m = current.getMonth() + 1;
   const monthStr = `${y}-${String(m).padStart(2,'0')}`;
+  return allData.filter(row => {
+    const d = row.date;
+    if (!d) return false;
+    if (typeof d === 'string') return d.startsWith(monthStr);
+    if (d instanceof Date) return d.getFullYear() === y && d.getMonth()+1 === m;
+    const ds = String(d);
+    return ds.startsWith(monthStr) || ds.startsWith(`${y}/${String(m).padStart(2,'0')}`);
+  });
+}
 
-  const monthData = allData.filter(row => row.date && row.date.startsWith(monthStr));
+function render() {
+  document.getElementById('monthLabel').textContent = getMonthLabel();
+  const monthData = getMonthData();
+  if (currentTab === 'summary') renderSummary(monthData);
+  else renderLog(monthData);
+}
 
+function renderSummary(monthData) {
   if (monthData.length === 0) {
     document.getElementById('content').innerHTML = '<div class="empty">この月の日報データはありません</div>';
     return;
   }
 
-  // 作業者別集計
   const workerMap = {};
-  // 現場別集計
   const siteMap = {};
 
   monthData.forEach(row => {
-    const workers = row.workers ? row.workers.split('、') : [];
+    const workers = row.workers ? String(row.workers).split('、') : [];
     const site = row.site || '';
-
     workers.forEach(w => {
       w = w.trim();
       if (!w) return;
@@ -136,7 +172,6 @@ function render() {
       if (!workerMap[w].sites[site]) workerMap[w].sites[site] = 0;
       workerMap[w].sites[site]++;
     });
-
     if (site) {
       if (!siteMap[site]) siteMap[site] = { total: 0, workers: {} };
       siteMap[site].total++;
@@ -168,7 +203,6 @@ function render() {
         <div class="summary-label">現場数</div>
       </div>
     </div>
-
     <div class="section-title">作業者別</div>
   `;
 
@@ -184,8 +218,7 @@ function render() {
             `<div class="detail-item"><div class="detail-name">${site}</div><div class="detail-count">${count}日</div></div>`
           ).join('')}
         </div>
-      </div>
-    `;
+      </div>`;
   });
 
   html += '<div class="section-title">現場別</div>';
@@ -202,11 +235,70 @@ function render() {
             `<div class="detail-item"><div class="detail-name">${worker}</div><div class="detail-count">${count}日</div></div>`
           ).join('')}
         </div>
-      </div>
-    `;
+      </div>`;
   });
 
   document.getElementById('content').innerHTML = html;
+}
+
+function renderLog(monthData) {
+  if (monthData.length === 0) {
+    document.getElementById('content').innerHTML = '<div class="empty">この月の日報データはありません</div>';
+    return;
+  }
+
+  const sorted = [...monthData].sort((a, b) => {
+    const da = String(a.date), db = String(b.date);
+    return db.localeCompare(da);
+  });
+
+  let html = '';
+  sorted.forEach((row, idx) => {
+    const dateStr = String(row.date || '');
+    const dateLabel = formatDate(dateStr);
+    html += `
+      <div class="log-item">
+        <div class="log-info">
+          <div class="log-date">${dateLabel}</div>
+          <div class="log-site">${row.site || ''}</div>
+          <div class="log-worker">${row.workers || ''}</div>
+        </div>
+        <button class="log-del" onclick="deleteReport('${dateStr}', '${row.site}')">削除</button>
+      </div>`;
+  });
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d)) return dateStr;
+  const wd = ['日','月','火','水','木','金','土'][d.getDay()];
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${wd}）`;
+}
+
+async function deleteReport(date, site) {
+  if (!confirm(`${formatDate(date)}\n${site}\n\nこの日報を削除しますか？`)) return;
+  try {
+    await fetch(GAS_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'deleteReport', date, site })
+    });
+    allData = allData.filter(r => !(String(r.date) === date && r.site === site));
+    localStorage.setItem('cache_reports', JSON.stringify(allData));
+    showToast('削除しました');
+    render();
+  } catch(e) {
+    showToast('削除に失敗しました');
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.opacity = '1';
+  setTimeout(() => { t.style.opacity = '0'; }, 2000);
 }
 
 loadData();
