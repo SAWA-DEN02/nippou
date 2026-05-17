@@ -281,30 +281,24 @@ function formatDate(dateStr) {
 
 async function deleteReport(date, site) {
   if (!confirm(`${formatDate(date)}\n${site}\n\nこの日報を削除しますか？`)) return;
-  const sample = allData[0];
-  alert(`allData sample date=${String(sample?.date).substring(0,30)}`);
   try {
     const res = await fetch(`${GAS_URL}?type=deleteReport&date=${encodeURIComponent(date)}&site=${encodeURIComponent(site)}`);
     const text = await res.text();
     let result;
-    try { result = JSON.parse(text); } catch(e) { result = { status: 'ok' }; }
-    allData = allData.filter(r => {
-      const d = String(r.date || '').substring(0, 10);
-      return !(d === date && r.site === site);
-    });
-    localStorage.setItem('cache_reports', JSON.stringify(allData));
-    showToast('削除しました');
-    render();
-    loadData();
+    try { result = JSON.parse(text); } catch(e) { result = { status: 'error' }; }
+    if (result.status === 'ok') {
+      allData = allData.filter(r => {
+        const d = String(r.date || '').substring(0, 10);
+        return !(d === date && r.site === site);
+      });
+      localStorage.setItem('cache_reports', JSON.stringify(allData));
+      showToast('削除しました');
+      render();
+    } else {
+      showToast('削除に失敗しました');
+    }
   } catch(e) {
-    allData = allData.filter(r => {
-      const d = String(r.date || '').substring(0, 10);
-      return !(d === date && r.site === site);
-    });
-    localStorage.setItem('cache_reports', JSON.stringify(allData));
-    showToast('削除しました');
-    render();
-    loadData();
+    showToast('削除に失敗しました');
   }
 }
 
