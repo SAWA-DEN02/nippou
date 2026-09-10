@@ -18,7 +18,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .month-selector { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 16px 0; }
 .nav-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(29,158,117,0.4); border-radius: 10px; width: 40px; height: 40px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; color: #1D9E75; }
 .nav-btn:active { background: rgba(29,158,117,0.2); }
-.month-label { font-size: 18px; font-weight: 600; color: #fff; min-width: 120px; text-align: center; text-shadow: 0 0 8px rgba(29,158,117,0.6); }
+.month-label { font-size: 18px; font-weight: 600; color: #fff; min-width: 140px; text-align: center; text-shadow: 0 0 8px rgba(29,158,117,0.6); }
+.month-label .sub { font-size: 11px; font-weight: 400; color: rgba(255,255,255,0.45); margin-top: 3px; text-shadow: none; }
+.mode-row { display: flex; gap: 8px; margin-top: 10px; }
+.mode-row .tab { padding: 8px; font-size: 13px; }
 .reload-btn { background: rgba(29,158,117,0.15); border: 1px solid rgba(29,158,117,0.4); border-radius: 10px; padding: 8px 16px; cursor: pointer; font-size: 13px; color: #1D9E75; margin: 0 auto 16px; display: block; }
 .reload-btn:active { background: rgba(29,158,117,0.3); }
 .section-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.4); letter-spacing: 0.08em; margin-bottom: 10px; margin-top: 20px; }
@@ -74,6 +77,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="title">作業集計</div>
   </div>
 
+  <div class="mode-row">
+    <div class="tab active" id="mode-month" onclick="switchMode('month')">月別</div>
+    <div class="tab" id="mode-closing" onclick="switchMode('closing')">20日〆</div>
+  </div>
+
   <div class="month-selector">
     <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
     <div class="month-label" id="monthLabel"></div>
@@ -99,6 +107,11 @@ let current = new Date();
 let allData = [];
 let currentTab = 'summary';
 
+// 集計期間の区切り方。'month' は1日〜末日、'closing' は前月20日〜当月19日。
+// closing では締め日（19日）が入っている月をその期間の呼び名にする（8/20〜9/19 なら9月分）。
+let periodMode = 'month';
+try { periodMode = localStorage.getItem('period_mode') === 'closing' ? 'closing' : 'month'; } catch(e) {}
+
 // innerHTML に値を差し込む前に必ず通す（現場名や作業者名に ' " < > & が入っても壊れないようにするため）
 function escHtml(v) {
   return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -116,8 +129,33 @@ function switchTab(tab) {
   render();
 }
 
-function getMonthLabel() {
-  return `${current.getFullYear()}年${current.getMonth()+1}月`;
+function switchMode(mode) {
+  periodMode = mode;
+  try { localStorage.setItem('period_mode', mode); } catch(e) {}
+  render();
+}
+
+function ymd(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// 表示中の集計期間を返す。from と to はどちらもその日を含む。
+function getPeriod() {
+  const y = current.getFullYear();
+  const m = current.getMonth();
+  if (periodMode === 'closing') {
+    const from = new Date(y, m - 1, 20);
+    const to = new Date(y, m, 19);
+    return {
+      from: ymd(from),
+      to: ymd(to),
+      label: `${y}年${m + 1}月分`,
+      sub: `${from.getMonth() + 1}/${from.getDate()} 〜 ${to.getMonth() + 1}/${to.getDate()}`
+    };
+  }
+  const from = new Date(y, m, 1);
+  const to = new Date(y, m + 1, 0);
+  return { from: ymd(from), to: ymd(to), label: `${y}年${m + 1}月`, sub: '' };
 }
 
 async function loadData() {
@@ -139,23 +177,23 @@ async function loadData() {
   render();
 }
 
-function getMonthData() {
-  const y = current.getFullYear();
-  const m = current.getMonth() + 1;
-  const monthStr = `${y}-${String(m).padStart(2,'0')}`;
+function getPeriodData() {
+  const p = getPeriod();
   return allData.filter(row => {
-    const d = row.date;
-    if (!d) return false;
-    if (typeof d === 'string') return d.startsWith(monthStr);
-    if (d instanceof Date) return d.getFullYear() === y && d.getMonth()+1 === m;
-    const ds = String(d);
-    return ds.startsWith(monthStr) || ds.startsWith(`${y}/${String(m).padStart(2,'0')}`);
+    // GAS は YYYY-MM-DD で返すが、古いデータで YYYY/MM/DD が混ざっていても拾えるようにする
+    const d = String(row.date || '').substring(0, 10).replace(/\//g, '-');
+    if (d.length !== 10) return false;
+    return d >= p.from && d <= p.to;
   });
 }
 
 function render() {
-  document.getElementById('monthLabel').textContent = getMonthLabel();
-  const monthData = getMonthData();
+  const p = getPeriod();
+  document.getElementById('monthLabel').innerHTML =
+    escHtml(p.label) + (p.sub ? `<div class="sub">${escHtml(p.sub)}</div>` : '');
+  document.getElementById('mode-month').classList.toggle('active', periodMode === 'month');
+  document.getElementById('mode-closing').classList.toggle('active', periodMode === 'closing');
+  const monthData = getPeriodData();
   if (currentTab === 'summary') renderSummary(monthData);
   else renderLog(monthData);
 }
