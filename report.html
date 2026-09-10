@@ -51,6 +51,25 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .log-info .log-worker { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
 .log-del { background: none; border: 1px solid rgba(239,154,154,0.3); border-radius: 8px; color: #ef9a9a; font-size: 13px; cursor: pointer; padding: 6px 10px; flex-shrink: 0; }
 .log-del:active { background: rgba(239,154,154,0.1); }
+.cal-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 2px; margin-bottom: 4px; }
+.cal-weekday { text-align: center; font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.35); padding: 2px 0; }
+.cal-weekday.sun { color: #ef9a9a; }
+.cal-weekday.sat { color: #90caf9; }
+.calendar { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 2px; }
+.cal-day { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 3px; min-height: 62px; overflow: hidden; min-width: 0; }
+.cal-day.out { background: rgba(255,255,255,0.02); opacity: 0.3; }
+.cal-day.today { border-color: #1D9E75; box-shadow: 0 0 6px rgba(29,158,117,0.3); }
+.cal-num { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.75); margin-bottom: 2px; }
+.cal-day.sun .cal-num { color: #ef9a9a; }
+.cal-day.sat .cal-num { color: #90caf9; }
+.cal-ev { border-radius: 3px; padding: 1px 3px; font-size: 9px; line-height: 1.4; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-more { font-size: 8px; color: rgba(255,255,255,0.4); }
+.site-legend { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; }
+.site-legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,0.75); }
+.site-legend-dot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+.site-legend-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.site-legend-count { color: #1D9E75; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+.cal-hint { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -107,8 +126,8 @@ let current = new Date();
 let allData = [];
 let currentTab = 'summary';
 
-// 集計期間の区切り方。'month' は1日〜末日、'closing' は前月20日〜当月19日。
-// closing では締め日（19日）が入っている月をその期間の呼び名にする（8/20〜9/19 なら9月分）。
+// 集計期間の区切り方。'month' は1日〜末日、'closing' は前月21日〜当月20日（20日締め）。
+// closing では締め日（20日）が入っている月をその期間の呼び名にする（8/21〜9/20 なら9月分）。
 let periodMode = 'month';
 try { periodMode = localStorage.getItem('period_mode') === 'closing' ? 'closing' : 'month'; } catch(e) {}
 
@@ -144,8 +163,8 @@ function getPeriod() {
   const y = current.getFullYear();
   const m = current.getMonth();
   if (periodMode === 'closing') {
-    const from = new Date(y, m - 1, 20);
-    const to = new Date(y, m, 19);
+    const from = new Date(y, m - 1, 21);
+    const to = new Date(y, m, 20);
     return {
       from: ymd(from),
       to: ymd(to),
@@ -267,24 +286,91 @@ function renderSummary(monthData) {
       </div>`;
   });
 
-  html += '<div class="section-title">現場別</div>';
-
-  Object.entries(siteMap).sort((a,b) => b[1].total - a[1].total).forEach(([name, data]) => {
-    html += `
-      <div class="card">
-        <div class="card-header">
-          <div class="card-name">${escHtml(name)}</div>
-          <div class="card-total">${data.total}<span>日</span></div>
-        </div>
-        <div class="detail-list">
-          ${Object.entries(data.workers).sort((a,b) => b[1]-a[1]).map(([worker, count]) =>
-            `<div class="detail-item"><div class="detail-name">${escHtml(worker)}</div><div class="detail-count">${count}日</div></div>`
-          ).join('')}
-        </div>
-      </div>`;
-  });
+  // 現場別のカードはやめて、その場所に期間のカレンダーを出す。
+  // 色が現場、文字が作業者。下の凡例が現場ごとの日数を兼ねている。
+  const siteOrder = Object.entries(siteMap).sort((a, b) => b[1].total - a[1].total).map(([name]) => name);
+  html += renderCalendar(monthData, getPeriod(), siteOrder);
+  html += renderSiteLegend(siteMap, siteOrder);
 
   document.getElementById('content').innerHTML = html;
+}
+
+const SITE_COLORS = [
+  { bg: 'rgba(29,158,117,0.30)',  text: '#7fe3c0' },
+  { bg: 'rgba(21,101,192,0.30)',  text: '#a8d5ff' },
+  { bg: 'rgba(230,81,0,0.30)',    text: '#ffcc80' },
+  { bg: 'rgba(136,14,79,0.30)',   text: '#f8a8c4' },
+  { bg: 'rgba(123,31,162,0.30)',  text: '#d7a8f0' },
+  { bg: 'rgba(255,193,7,0.25)',   text: '#ffe082' },
+  { bg: 'rgba(0,150,136,0.30)',   text: '#8ce0d6' },
+  { bg: 'rgba(96,125,139,0.35)',  text: '#c3d4dc' }
+];
+
+function parseYmd(s) {
+  const parts = String(s).split('-');
+  return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+}
+
+function siteColor(siteOrder, site) {
+  const i = siteOrder.indexOf(site);
+  return i < 0 ? SITE_COLORS[SITE_COLORS.length - 1] : SITE_COLORS[i % SITE_COLORS.length];
+}
+
+function renderCalendar(data, p, siteOrder) {
+  const byDate = {};
+  data.forEach(r => {
+    const d = String(r.date || '').substring(0, 10).replace(/\//g, '-');
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(r);
+  });
+
+  // 期間の最初の週の日曜から、最後の週の土曜までを並べる。
+  // 20日締めだと月をまたぐので、月のカレンダーではなく期間のカレンダーにしている。
+  const start = parseYmd(p.from);
+  start.setDate(start.getDate() - start.getDay());
+  const end = parseYmd(p.to);
+  end.setDate(end.getDate() + (6 - end.getDay()));
+  const todayStr = ymd(new Date());
+
+  let html = '<div class="section-title">カレンダー</div>';
+  html += '<div class="cal-hint">色が現場、文字が作業者です</div>';
+  html += '<div class="cal-weekdays">' +
+    ['日', '月', '火', '水', '木', '金', '土'].map((w, i) =>
+      `<div class="cal-weekday${i === 0 ? ' sun' : (i === 6 ? ' sat' : '')}">${w}</div>`).join('') +
+    '</div><div class="calendar">';
+
+  for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const key = ymd(d);
+    const inPeriod = key >= p.from && key <= p.to;
+    const col = d.getDay();
+    let cls = inPeriod ? '' : ' out';
+    if (col === 0) cls += ' sun';
+    else if (col === 6) cls += ' sat';
+    if (key === todayStr) cls += ' today';
+
+    const rows = inPeriod ? (byDate[key] || []) : [];
+    const chips = rows.slice(0, 2).map(r => {
+      const c = siteColor(siteOrder, r.site || '');
+      return `<div class="cal-ev" style="background:${c.bg};color:${c.text};">${escHtml(r.workers || '―')}</div>`;
+    }).join('');
+    const more = rows.length > 2 ? `<div class="cal-more">+${rows.length - 2}</div>` : '';
+    html += `<div class="cal-day${cls}"><div class="cal-num">${d.getDate()}</div>${chips}${more}</div>`;
+  }
+  return html + '</div>';
+}
+
+function renderSiteLegend(siteMap, siteOrder) {
+  if (siteOrder.length === 0) return '';
+  let html = '<div class="site-legend">';
+  siteOrder.forEach(name => {
+    const c = siteColor(siteOrder, name);
+    html += `<div class="site-legend-item">
+      <div class="site-legend-dot" style="background:${c.bg};border:1px solid ${c.text};"></div>
+      <div class="site-legend-name">${escHtml(name)}</div>
+      <div class="site-legend-count">${siteMap[name].total}日</div>
+    </div>`;
+  });
+  return html + '</div>';
 }
 
 function renderLog(monthData) {
