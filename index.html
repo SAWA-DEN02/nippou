@@ -26,6 +26,28 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .top-card .icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
 .top-card .icon.green { background: #E1F5EE; }
 .top-card .icon.gray { background: #f0f0f0; }
+.top-card .icon.blue { background: #E3EEFB; }
+.month-nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 16px; }
+.month-nav button { background: #fff; border: 1px solid #ddd; border-radius: 10px; width: 40px; height: 40px; cursor: pointer; font-size: 18px; color: #1D9E75; }
+.month-nav button:active { background: #f0f0f0; }
+.month-nav .label { font-size: 17px; font-weight: 600; color: #1a1a1a; min-width: 120px; text-align: center; }
+.rep-item { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+.rep-item:active { background: #f5f5f5; }
+.rep-item .info { flex: 1; min-width: 0; }
+.rep-item .d { font-size: 12px; color: #999; }
+.rep-item .s { font-size: 15px; font-weight: 600; color: #1a1a1a; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rep-item .w { font-size: 12px; color: #666; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rep-item .arr { color: #ccc; font-size: 20px; flex-shrink: 0; }
+.rep-empty { text-align: center; padding: 40px 0; color: #999; font-size: 14px; }
+.rep-loading { text-align: center; padding: 40px 0; color: #1D9E75; font-size: 14px; }
+.rep-count { font-size: 12px; color: #999; text-align: center; margin-bottom: 10px; }
+.rep-modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 500; align-items: flex-end; }
+.rep-modal-bg.show { display: flex; }
+.rep-modal { background: #f5f5f5; border-radius: 20px 20px 0 0; padding: 16px 16px 32px; width: 100%; max-height: 88vh; overflow-y: auto; }
+.rep-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.rep-modal-title { font-size: 16px; font-weight: 700; color: #1a1a1a; }
+.rep-modal-close { background: none; border: none; color: #999; font-size: 26px; cursor: pointer; padding: 2px 6px; line-height: 1; }
+.rep-text { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 14px 16px; font-size: 14px; white-space: pre-wrap; color: #1a1a1a; line-height: 1.8; word-break: break-word; }
 .top-card .card-text h3 { font-size: 16px; font-weight: 600; color: #1a1a1a; margin-bottom: 3px; }
 .top-card .card-text p { font-size: 12px; color: #999; }
 .top-card .arr { margin-left: auto; color: #ccc; font-size: 22px; flex-shrink: 0; }
@@ -170,6 +192,14 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
       </div>
       <div class="arr">›</div>
     </div>
+    <div class="top-card" onclick="showPage('viewPage')">
+      <div class="icon blue">📖</div>
+      <div class="card-text">
+        <h3>日報を確認</h3>
+        <p>保存した日報を見返す</p>
+      </div>
+      <div class="arr">›</div>
+    </div>
     <div class="top-card" onclick="showPage('settingsPage')">
       <div class="icon gray">🏗</div>
       <div class="card-text">
@@ -250,6 +280,21 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
 </div>
 </div>
 
+<!-- 日報の確認画面 -->
+<div class="page" id="viewPage">
+<div class="container">
+  <button class="btn back" onclick="showPage('topPage')">← トップに戻る</button>
+  <h2>日報を確認</h2>
+  <div class="month-nav">
+    <button onclick="changeViewMonth(-1)">‹</button>
+    <div class="label" id="viewMonthLabel"></div>
+    <button onclick="changeViewMonth(1)">›</button>
+  </div>
+  <div id="viewList"><div class="rep-loading">読み込み中...</div></div>
+  <div style="height:40px;"></div>
+</div>
+</div>
+
 <!-- 設定画面 -->
 <div class="page" id="settingsPage">
 <div class="container">
@@ -273,6 +318,20 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
     <div id="workerList"><div class="loading">読み込み中...</div></div>
   </div>
 </div>
+</div>
+
+<!-- 日報を1件開いたときの表示 -->
+<div class="rep-modal-bg" id="repModalBg" onclick="closeReportDetail(event)">
+  <div class="rep-modal">
+    <div class="rep-modal-header">
+      <div class="rep-modal-title" id="repModalTitle"></div>
+      <button class="rep-modal-close" onclick="closeReportDetailDirect()">×</button>
+    </div>
+    <div class="rep-text" id="repModalText"></div>
+    <div class="out-actions">
+      <button class="out-btn main-btn" onclick="copyReportText()">コピー</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -299,6 +358,115 @@ function showPage(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
   if (id === 'reportPage' || id === 'settingsPage') loadFromServer();
+  if (id === 'viewPage') loadReports();
+}
+
+/* ---------- 日報の確認 ---------- */
+
+let viewMonth = new Date();
+let viewReports = [];
+let viewRows = [];
+let viewDetailText = '';
+
+function changeViewMonth(diff) {
+  viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + diff, 1);
+  renderViewList();
+}
+
+async function loadReports() {
+  document.getElementById('viewList').innerHTML = '<div class="rep-loading">読み込み中...</div>';
+  // 先にキャッシュを出しておき、そのあと最新を取りにいく（圏外でも前回の内容は見られる）
+  try {
+    const cached = localStorage.getItem('cache_reports');
+    if (cached) { viewReports = JSON.parse(cached); renderViewList(); }
+  } catch(e) {}
+  try {
+    const res = await fetch(GAS_URL + '?type=reports');
+    const data = await res.json();
+    if (data.status !== 'ok') throw new Error(data.message || 'サーバーエラー');
+    viewReports = data.data;
+    try { localStorage.setItem('cache_reports', JSON.stringify(viewReports)); } catch(e) {}
+  } catch(e) {
+    showToast('最新データを取得できませんでした', 'red');
+  }
+  renderViewList();
+}
+
+function renderViewList() {
+  const y = viewMonth.getFullYear();
+  const m = viewMonth.getMonth() + 1;
+  document.getElementById('viewMonthLabel').textContent = `${y}年${m}月`;
+
+  const prefix = `${y}-${String(m).padStart(2, '0')}`;
+  viewRows = viewReports
+    .filter(r => String(r.date || '').substring(0, 10).replace(/\//g, '-').indexOf(prefix) === 0)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+  const el = document.getElementById('viewList');
+  if (viewRows.length === 0) {
+    el.innerHTML = '<div class="rep-empty">この月の日報はありません</div>';
+    return;
+  }
+  el.innerHTML = `<div class="rep-count">${viewRows.length}件</div>` + viewRows.map((r, i) => `
+    <div class="rep-item" data-i="${i}" onclick="openReportDetail(Number(this.dataset.i))">
+      <div class="info">
+        <div class="d">${escHtml(formatDate(String(r.date || '').substring(0, 10)))}</div>
+        <div class="s">${escHtml(r.site)}</div>
+        <div class="w">${escHtml(r.workers)}</div>
+      </div>
+      <div class="arr">›</div>
+    </div>`).join('');
+}
+
+// 保存されている項目から、入力したときと同じ形の日報テキストを組み立て直す
+function buildReportText(row) {
+  const dateStr = String(row.date || '').substring(0, 10);
+  let text = `【日報】${formatDate(dateStr)}\n`;
+  text += `━━━━━━━━━━━━━━━\n`;
+  text += `■ 現場名\n${row.site || ''}\n\n`;
+  text += `■ 作業者\n${row.workers || ''}\n\n`;
+  text += `■ 作業時間\n${row.timeStr || '―'}\n\n`;
+  text += `■ 作業内容\n`;
+  String(row.tasks || '').split('\n').filter(t => t.trim()).forEach((t, i) => {
+    text += `${i + 1}. ${t}\n`;
+  });
+  const parking = Number(row.parking) || 0;
+  const highway = Number(row.highway) || 0;
+  if (parking > 0) text += `\n■ 駐車場代\n${parking.toLocaleString()}円`;
+  if (highway > 0) text += `\n■ 高速代\n${highway.toLocaleString()}円`;
+  if (row.notes) text += `\n■ 備考\n${row.notes}`;
+  return text;
+}
+
+function openReportDetail(i) {
+  const r = viewRows[i];
+  if (!r) return;
+  viewDetailText = buildReportText(r);
+  document.getElementById('repModalTitle').textContent = formatDate(String(r.date || '').substring(0, 10));
+  // textContent で入れるので、現場名などに記号が入っていても崩れない
+  document.getElementById('repModalText').textContent = viewDetailText;
+  document.getElementById('repModalBg').classList.add('show');
+}
+
+function closeReportDetail(e) {
+  if (e.target === document.getElementById('repModalBg')) closeReportDetailDirect();
+}
+
+function closeReportDetailDirect() {
+  document.getElementById('repModalBg').classList.remove('show');
+}
+
+async function copyReportText() {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(viewDetailText);
+    } else {
+      fallbackCopy(viewDetailText);
+    }
+  } catch(e) {
+    fallbackCopy(viewDetailText);
+  }
+  showToast('コピーしました', 'green');
 }
 
 async function loadFromServer() {
@@ -456,6 +624,7 @@ function removeTask(btn) {
 
 function formatDate(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d)) return String(dateStr || '');
   const wd = ['日','月','火','水','木','金','土'][d.getDay()];
   return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${wd}）`;
 }
