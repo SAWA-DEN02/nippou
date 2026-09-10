@@ -99,6 +99,11 @@ let current = new Date();
 let allData = [];
 let currentTab = 'summary';
 
+// innerHTML に値を差し込む前に必ず通す（現場名や作業者名に ' " < > & が入っても壊れないようにするため）
+function escHtml(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 function changeMonth(diff) {
   current = new Date(current.getFullYear(), current.getMonth() + diff, 1);
   render();
@@ -120,13 +125,16 @@ async function loadData() {
   try {
     const res = await fetch(GAS_URL + '?type=reports');
     const data = await res.json();
-    if (data.status === 'ok') {
-      allData = data.data;
-      localStorage.setItem('cache_reports', JSON.stringify(allData));
-    }
+    if (data.status !== 'ok') throw new Error(data.message || 'サーバーエラー');
+    allData = data.data;
+    localStorage.setItem('cache_reports', JSON.stringify(allData));
   } catch(e) {
-    const cached = localStorage.getItem('cache_reports');
-    if (cached) allData = JSON.parse(cached);
+    // 通信に失敗したときだけでなく、GAS がエラーを返したときもキャッシュにフォールバックする
+    try {
+      const cached = localStorage.getItem('cache_reports');
+      if (cached) allData = JSON.parse(cached);
+    } catch(e2) {}
+    showToast('最新データを取得できませんでした');
   }
   render();
 }
@@ -210,12 +218,12 @@ function renderSummary(monthData) {
     html += `
       <div class="card">
         <div class="card-header">
-          <div class="card-name">${name}</div>
+          <div class="card-name">${escHtml(name)}</div>
           <div class="card-total">${data.total}<span>日</span></div>
         </div>
         <div class="detail-list">
           ${Object.entries(data.sites).sort((a,b) => b[1]-a[1]).map(([site, count]) =>
-            `<div class="detail-item"><div class="detail-name">${site}</div><div class="detail-count">${count}日</div></div>`
+            `<div class="detail-item"><div class="detail-name">${escHtml(site)}</div><div class="detail-count">${count}日</div></div>`
           ).join('')}
         </div>
       </div>`;
@@ -227,12 +235,12 @@ function renderSummary(monthData) {
     html += `
       <div class="card">
         <div class="card-header">
-          <div class="card-name">${name}</div>
+          <div class="card-name">${escHtml(name)}</div>
           <div class="card-total">${data.total}<span>日</span></div>
         </div>
         <div class="detail-list">
           ${Object.entries(data.workers).sort((a,b) => b[1]-a[1]).map(([worker, count]) =>
-            `<div class="detail-item"><div class="detail-name">${worker}</div><div class="detail-count">${count}日</div></div>`
+            `<div class="detail-item"><div class="detail-name">${escHtml(worker)}</div><div class="detail-count">${count}日</div></div>`
           ).join('')}
         </div>
       </div>`;
@@ -253,18 +261,18 @@ function renderLog(monthData) {
   });
 
   let html = '';
-  sorted.forEach((row, idx) => {
+  sorted.forEach(row => {
     const rawDate = row.date || '';
     const dateStr = String(rawDate).substring(0, 10);
     const dateLabel = formatDate(dateStr);
     html += `
       <div class="log-item">
         <div class="log-info">
-          <div class="log-date">${dateLabel}</div>
-          <div class="log-site">${row.site || ''}</div>
-          <div class="log-worker">${row.workers || ''}</div>
+          <div class="log-date">${escHtml(dateLabel)}</div>
+          <div class="log-site">${escHtml(row.site)}</div>
+          <div class="log-worker">${escHtml(row.workers)}</div>
         </div>
-        <button class="log-del" onclick="deleteReport('${dateStr}', '${row.site}')">削除</button>
+        <button class="log-del" data-date="${escHtml(dateStr)}" data-site="${escHtml(row.site)}" onclick="deleteReport(this.dataset.date, this.dataset.site)">削除</button>
       </div>`;
   });
 
@@ -287,10 +295,12 @@ async function deleteReport(date, site) {
     let result;
     try { result = JSON.parse(text); } catch(e) { result = { status: 'error' }; }
     if (result.status === 'ok') {
-      allData = allData.filter(r => {
-        const d = String(r.date || '').substring(0, 10);
-        return !(d === date && r.site === site);
-      });
+      // GAS 側は下の行から探して最初に一致した1件だけを削除するので、
+      // 画面側も同じく最後の1件だけを消す（同じ日・同じ現場が2件ある場合に表示がズレないように）
+      for (let i = allData.length - 1; i >= 0; i--) {
+        const d = String(allData[i].date || '').substring(0, 10);
+        if (d === date && allData[i].site === site) { allData.splice(i, 1); break; }
+      }
       localStorage.setItem('cache_reports', JSON.stringify(allData));
       showToast('削除しました');
       render();

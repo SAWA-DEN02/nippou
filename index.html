@@ -289,6 +289,11 @@ let workers = [];
 let selectedWorkers = [];
 let currentReport = {};
 
+// innerHTML に値を差し込む前に必ず通す（名前に ' " < > & が入っても壊れないようにするため）
+function escHtml(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -334,7 +339,7 @@ function renderWorkerPills() {
     return;
   }
   el.innerHTML = workers.map(w =>
-    `<button class="pill${selectedWorkers.includes(w) ? ' active' : ''}" onclick="toggleWorker(this,'${w}')">${w}</button>`
+    `<button class="pill${selectedWorkers.includes(w) ? ' active' : ''}" data-name="${escHtml(w)}" onclick="toggleWorker(this, this.dataset.name)">${escHtml(w)}</button>`
   ).join('');
 }
 
@@ -351,20 +356,20 @@ function toggleWorker(el, name) {
 function renderSiteList() {
   const el = document.getElementById('siteList');
   if (sites.length === 0) { el.innerHTML = '<div class="no-data">登録された現場はありません</div>'; return; }
-  el.innerHTML = sites.map((s, i) => `
+  el.innerHTML = sites.map(s => `
     <div class="setting-item">
-      <div class="name">${s}</div>
-      <button class="del" onclick="deleteSite('${s}')">✕</button>
+      <div class="name">${escHtml(s)}</div>
+      <button class="del" data-name="${escHtml(s)}" onclick="deleteSite(this.dataset.name)">✕</button>
     </div>`).join('');
 }
 
 function renderWorkerList() {
   const el = document.getElementById('workerList');
   if (workers.length === 0) { el.innerHTML = '<div class="no-data">登録された作業者はいません</div>'; return; }
-  el.innerHTML = workers.map((w, i) => `
+  el.innerHTML = workers.map(w => `
     <div class="setting-item">
-      <div class="name">${w}</div>
-      <button class="del" onclick="deleteWorker('${w}')">✕</button>
+      <div class="name">${escHtml(w)}</div>
+      <button class="del" data-name="${escHtml(w)}" onclick="deleteWorker(this.dataset.name)">✕</button>
     </div>`).join('');
 }
 
@@ -372,49 +377,67 @@ async function addSite() {
   const input = document.getElementById('newSite');
   const val = input.value.trim();
   if (!val) return;
+  if (sites.includes(val)) { showToast('その現場名は既に登録されています', 'red'); return; }
   input.value = '';
-  await gasPost({ action: 'addSite', value: val });
+  const ok = await gasPost({ action: 'addSite', value: val });
+  if (ok === false) { showToast('現場名の追加に失敗しました', 'red'); return; }
   sites.push(val);
   renderSiteSelect();
   renderSiteList();
-  showToast('現場名を追加しました', 'green');
+  showToast(ok ? '現場名を追加しました' : '追加しました（通信結果は未確認）', 'green');
 }
 
 async function deleteSite(val) {
-  await gasPost({ action: 'deleteSite', value: val });
+  if (!confirm(`現場名「${val}」を削除しますか？`)) return;
+  const ok = await gasPost({ action: 'deleteSite', value: val });
+  if (ok === false) { showToast('現場名の削除に失敗しました', 'red'); return; }
   sites = sites.filter(s => s !== val);
   renderSiteSelect();
   renderSiteList();
+  showToast(ok ? '現場名を削除しました' : '削除しました（通信結果は未確認）', 'green');
 }
 
 async function addWorker() {
   const input = document.getElementById('newWorker');
   const val = input.value.trim();
   if (!val) return;
+  if (workers.includes(val)) { showToast('その作業者は既に登録されています', 'red'); return; }
   input.value = '';
-  await gasPost({ action: 'addWorker', value: val });
+  const ok = await gasPost({ action: 'addWorker', value: val });
+  if (ok === false) { showToast('作業者の追加に失敗しました', 'red'); return; }
   workers.push(val);
   renderWorkerPills();
   renderWorkerList();
-  showToast('作業者を追加しました', 'green');
+  showToast(ok ? '作業者を追加しました' : '追加しました（通信結果は未確認）', 'green');
 }
 
 async function deleteWorker(val) {
+  if (!confirm(`作業者「${val}」を削除しますか？`)) return;
+  const ok = await gasPost({ action: 'deleteWorker', value: val });
+  if (ok === false) { showToast('作業者の削除に失敗しました', 'red'); return; }
   selectedWorkers = selectedWorkers.filter(w => w !== val);
-  await gasPost({ action: 'deleteWorker', value: val });
   workers = workers.filter(w => w !== val);
   renderWorkerPills();
   renderWorkerList();
+  showToast(ok ? '作業者を削除しました' : '削除しました（通信結果は未確認）', 'green');
 }
 
+// Content-Type を text/plain にすると CORS のプリフライト（OPTIONS）が飛ばないので、
+// no-cors を使わずに済み、GAS からの応答（成功/失敗）を読める。
+// GAS 側は e.postData.contents を JSON.parse しているだけなので、GAS のコード変更は不要。
+// 戻り値 … true:成功 / false:GAS がエラーを返した / null:通信できず判定不能
 async function gasPost(data) {
   try {
-    await fetch(GAS_URL, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(data)
     });
-  } catch(e) {}
+    const result = await res.json();
+    return !!(result && result.status === 'ok');
+  } catch(e) {
+    return null;
+  }
 }
 
 function addTask() {
@@ -484,7 +507,7 @@ async function copyAndRegister() {
   });
   try {
     await doCopy();
-    await gasPost({
+    const ok = await gasPost({
       action: 'saveReport',
       title: `日報 ${currentReport.site}`,
       detail: currentReport.report,
@@ -497,8 +520,14 @@ async function copyAndRegister() {
       highway: currentReport.highway,
       notes: currentReport.notes
     });
+    if (ok === false) {
+      btn.textContent = 'コピー ＆ カレンダー登録';
+      btn.disabled = false;
+      showToast('コピーはできましたが、保存に失敗しました', 'red');
+      return;
+    }
     btn.textContent = '完了！';
-    showToast('コピー ＆ カレンダー登録 完了！', 'green');
+    showToast(ok ? 'コピー ＆ カレンダー登録 完了！' : 'コピーしました（保存結果は未確認）', 'green');
   } catch(e) {
     btn.textContent = 'コピー ＆ カレンダー登録';
     btn.disabled = false;
@@ -568,7 +597,20 @@ function loadEntry(i) {
   selectedWorkers = h.workers || [];
   renderWorkerPills();
   document.getElementById('reportOutput').textContent = h.report;
-  currentReport = { date: h.date, dateLabel: h.dateLabel, site: h.site, report: h.report };
+  // 履歴から読み込んだあとに登録しても全項目が保存されるよう、生成時と同じ形に揃える
+  const timeStr = (h.start && h.end) ? `${h.start} 〜 ${h.end}` : (h.start ? `${h.start} 〜` : '―');
+  currentReport = {
+    date: h.date,
+    dateLabel: h.dateLabel,
+    site: h.site,
+    report: h.report,
+    workers: (h.workers || []).join('、'),
+    timeStr: timeStr,
+    tasks: (h.tasks || []).join('\n'),
+    parking: h.parking || '',
+    highway: h.highway || '',
+    notes: h.notes || ''
+  };
   document.getElementById('outputArea').style.display = 'block';
   const btn = document.getElementById('mainBtn');
   btn.textContent = 'コピー ＆ カレンダー登録';

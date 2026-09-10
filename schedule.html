@@ -206,6 +206,11 @@ let events = {};
 let sites = [];
 let workers = [];
 
+// innerHTML に値を差し込む前に必ず通す（現場名やメモに ' " < > & が入っても壊れないようにするため）
+function escHtml(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 async function loadData() {
   try {
     const cachedSites = localStorage.getItem('cache_sites');
@@ -243,7 +248,11 @@ async function fetchLatest() {
 }
 
 function saveEvents() {
-  localStorage.setItem('schedule_events', JSON.stringify(events));
+  try {
+    localStorage.setItem('schedule_events', JSON.stringify(events));
+  } catch(e) {
+    showToast('保存に失敗しました（端末の空き容量を確認してください）');
+  }
 }
 
 function getWorkerColor(worker) {
@@ -256,7 +265,7 @@ function renderLegend() {
   if (workers.length === 0) { el.innerHTML = ''; return; }
   el.innerHTML = workers.map(w => {
     const c = getWorkerColor(w);
-    return `<div class="legend-item"><div class="legend-dot" style="background:${c.bg};border:1px solid ${c.border};"></div>${w}</div>`;
+    return `<div class="legend-item"><div class="legend-dot" style="background:${c.bg};border:1px solid ${c.border};"></div>${escHtml(w)}</div>`;
   }).join('');
 }
 
@@ -298,7 +307,7 @@ function render() {
     const evHtml = dayEvents.slice(0, 2).map(e => {
       const firstWorker = (e.workers || [e.worker])[0];
       const c = getWorkerColor(firstWorker);
-      return `<div class="event" style="background:${c.bg};color:${c.text};">${e.site}</div>`;
+      return `<div class="event" style="background:${c.bg};color:${c.text};">${escHtml(e.site)}</div>`;
     }).join('');
     const more = dayEvents.length > 2 ? `<div class="more">+${dayEvents.length - 2}</div>` : '';
     const click = dateStr ? `onclick="openDayModal('${dateStr}')"` : '';
@@ -344,11 +353,11 @@ function renderScheduleList(date) {
     const c = getWorkerColor(firstWorker);
     return `<div class="schedule-item">
       <div class="info">
-        <div class="site" style="color:${c.text};">${e.site}</div>
-        <div class="worker">${workerList.join('、')}</div>
-        ${e.memo ? `<div class="memo">${e.memo}</div>` : ''}
+        <div class="site" style="color:${c.text};">${escHtml(e.site)}</div>
+        <div class="worker">${escHtml(workerList.join('、'))}</div>
+        ${e.memo ? `<div class="memo">${escHtml(e.memo)}</div>` : ''}
       </div>
-      <button class="del" onclick="deleteEvent('${date}', ${i})">✕</button>
+      <button class="del" data-date="${escHtml(date)}" data-idx="${i}" onclick="deleteEvent(this.dataset.date, Number(this.dataset.idx))">✕</button>
     </div>`;
   }).join('');
 }
@@ -364,7 +373,7 @@ function openAddModal() {
   const pillsEl = document.getElementById('addWorkerPills');
   pillsEl.innerHTML = workers.length === 0
     ? '<div style="font-size:13px;color:rgba(255,255,255,0.3);">作業者が登録されていません</div>'
-    : workers.map(w => `<button class="worker-pill" onclick="toggleWorker(this,'${w}')">${w}</button>`).join('');
+    : workers.map(w => `<button class="worker-pill" data-name="${escHtml(w)}" onclick="toggleWorker(this, this.dataset.name)">${escHtml(w)}</button>`).join('');
 
   document.getElementById('addMemo').value = '';
   document.getElementById('addModalBg').classList.add('show');
@@ -402,11 +411,16 @@ function addEvent() {
 }
 
 function deleteEvent(date, idx) {
+  const target = (events[date] || [])[idx];
+  if (!target) return;
+  // 日報の削除には確認があるのに予定表には無く、誤タップで即消えていたため合わせる
+  if (!confirm(`${formatDate(date)}\n${target.site}\n\nこの予定を削除しますか？`)) return;
   events[date].splice(idx, 1);
   if (events[date].length === 0) delete events[date];
   saveEvents();
   renderScheduleList(date);
   render();
+  showToast('予定を削除しました');
 }
 
 function showToast(msg) {
