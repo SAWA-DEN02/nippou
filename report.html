@@ -70,6 +70,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .site-legend-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .site-legend-count { color: #1D9E75; font-size: 13px; font-weight: 600; flex-shrink: 0; }
 .cal-hint { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 8px; }
+.cal-day.has { cursor: pointer; }
+.cal-day.has:active { background: rgba(29,158,117,0.18); }
+.day-modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 500; align-items: flex-end; }
+.day-modal-bg.show { display: flex; }
+.day-modal { background: #1a1a2e; border-radius: 20px 20px 0 0; padding: 18px 16px 36px; width: 100%; border-top: 1px solid rgba(29,158,117,0.4); max-height: 85vh; overflow-y: auto; }
+.day-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.day-modal-title { font-size: 19px; font-weight: 700; color: #fff; text-shadow: 0 0 8px rgba(29,158,117,0.5); }
+.day-modal-close { background: none; border: none; color: rgba(255,255,255,0.4); font-size: 26px; cursor: pointer; padding: 2px 6px; line-height: 1; }
+.day-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+.day-card .site { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.day-card .site .dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.day-row { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+.day-row .k { font-size: 12px; color: rgba(255,255,255,0.4); width: 66px; flex-shrink: 0; padding-top: 3px; }
+.day-row .v { font-size: 15px; color: #fff; flex: 1; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+.day-row .v.workers { font-size: 18px; font-weight: 700; color: #4ecca3; line-height: 1.5; }
+.day-empty { text-align: center; padding: 24px 0; color: rgba(255,255,255,0.35); font-size: 14px; }
 </style>
 </head>
 <body>
@@ -115,6 +131,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   </div>
 
   <div id="content"><div class="loading">読み込み中...</div></div>
+</div>
+
+<!-- カレンダーの日付をタップしたときに開く詳細 -->
+<div class="day-modal-bg" id="dayModalBg" onclick="closeDayModal(event)">
+  <div class="day-modal">
+    <div class="day-modal-header">
+      <div class="day-modal-title" id="dayModalTitle"></div>
+      <button class="day-modal-close" onclick="closeDayModalDirect()">×</button>
+    </div>
+    <div id="dayModalBody"></div>
+  </div>
 </div>
 
 <div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 28px;border-radius:99px;font-size:14px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;white-space:nowrap;color:#fff;background:#1D9E75;"></div>
@@ -316,7 +343,11 @@ function siteColor(siteOrder, site) {
   return i < 0 ? SITE_COLORS[SITE_COLORS.length - 1] : SITE_COLORS[i % SITE_COLORS.length];
 }
 
+// カレンダーの色と、日付をタップしたときの詳細の色を合わせるために覚えておく
+let currentSiteOrder = [];
+
 function renderCalendar(data, p, siteOrder) {
+  currentSiteOrder = siteOrder;
   const byDate = {};
   data.forEach(r => {
     const d = String(r.date || '').substring(0, 10).replace(/\//g, '-');
@@ -333,7 +364,7 @@ function renderCalendar(data, p, siteOrder) {
   const todayStr = ymd(new Date());
 
   let html = '<div class="section-title">カレンダー</div>';
-  html += '<div class="cal-hint">色が現場、文字が作業者です</div>';
+  html += '<div class="cal-hint">色が現場、文字が作業者です。日付をタップすると詳細が開きます</div>';
   html += '<div class="cal-weekdays">' +
     ['日', '月', '火', '水', '木', '金', '土'].map((w, i) =>
       `<div class="cal-weekday${i === 0 ? ' sun' : (i === 6 ? ' sat' : '')}">${w}</div>`).join('') +
@@ -354,9 +385,49 @@ function renderCalendar(data, p, siteOrder) {
       return `<div class="cal-ev" style="background:${c.bg};color:${c.text};">${escHtml(r.workers || '―')}</div>`;
     }).join('');
     const more = rows.length > 2 ? `<div class="cal-more">+${rows.length - 2}</div>` : '';
-    html += `<div class="cal-day${cls}"><div class="cal-num">${d.getDate()}</div>${chips}${more}</div>`;
+    // 日報がある日だけタップできるようにする（セルは狭くて作業者名が読めないため）
+    const tap = rows.length > 0
+      ? ` data-date="${escHtml(key)}" onclick="openDayModal(this.dataset.date)"`
+      : '';
+    html += `<div class="cal-day${cls}${rows.length > 0 ? ' has' : ''}"${tap}><div class="cal-num">${d.getDate()}</div>${chips}${more}</div>`;
   }
   return html + '</div>';
+}
+
+// カレンダーのセルは狭くて作業者名が省略されるので、タップしたら全部読める形で出す
+function openDayModal(dateStr) {
+  const rows = allData.filter(r =>
+    String(r.date || '').substring(0, 10).replace(/\//g, '-') === dateStr);
+  document.getElementById('dayModalTitle').textContent = formatDate(dateStr);
+
+  const body = document.getElementById('dayModalBody');
+  if (rows.length === 0) {
+    body.innerHTML = '<div class="day-empty">この日の日報はありません</div>';
+  } else {
+    const line = (k, v) => v ? `<div class="day-row"><div class="k">${escHtml(k)}</div><div class="v">${escHtml(v)}</div></div>` : '';
+    const yen = v => { const n = Number(v); return n > 0 ? n.toLocaleString() + '円' : ''; };
+    body.innerHTML = rows.map(r => {
+      const c = siteColor(currentSiteOrder, r.site || '');
+      return `<div class="day-card">
+        <div class="site"><div class="dot" style="background:${c.bg};border:1px solid ${c.text};"></div>${escHtml(r.site || '（現場名なし）')}</div>
+        <div class="day-row"><div class="k">作業者</div><div class="v workers">${escHtml(r.workers || '―')}</div></div>
+        ${line('作業時間', r.timeStr)}
+        ${line('作業内容', r.tasks)}
+        ${line('駐車場代', yen(r.parking))}
+        ${line('高速代', yen(r.highway))}
+        ${line('備考', r.notes)}
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('dayModalBg').classList.add('show');
+}
+
+function closeDayModal(e) {
+  if (e.target === document.getElementById('dayModalBg')) closeDayModalDirect();
+}
+
+function closeDayModalDirect() {
+  document.getElementById('dayModalBg').classList.remove('show');
 }
 
 function renderSiteLegend(siteMap, siteOrder) {
