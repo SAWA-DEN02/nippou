@@ -272,7 +272,7 @@ function renderLog(monthData) {
           <div class="log-site">${escHtml(row.site)}</div>
           <div class="log-worker">${escHtml(row.workers)}</div>
         </div>
-        <button class="log-del" data-date="${escHtml(dateStr)}" data-site="${escHtml(row.site)}" onclick="deleteReport(this.dataset.date, this.dataset.site)">削除</button>
+        <button class="log-del" data-id="${escHtml(row.id || '')}" data-date="${escHtml(dateStr)}" data-site="${escHtml(row.site)}" onclick="deleteReport(this.dataset.id, this.dataset.date, this.dataset.site)">削除</button>
       </div>`;
   });
 
@@ -287,19 +287,29 @@ function formatDate(dateStr) {
   return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${wd}）`;
 }
 
-async function deleteReport(date, site) {
+async function deleteReport(id, date, site) {
   if (!confirm(`${formatDate(date)}\n${site}\n\nこの日報を削除しますか？`)) return;
   try {
-    const res = await fetch(`${GAS_URL}?type=deleteReport&date=${encodeURIComponent(date)}&site=${encodeURIComponent(site)}`);
+    // ID があれば ID で消す（同じ日・同じ現場の日報が2件あっても取り違えない）。
+    // GAS がまだ更新されておらず ID を持っていない日報は、従来どおり日付＋現場名で消す。
+    const query = id
+      ? `?type=deleteReport&id=${encodeURIComponent(id)}`
+      : `?type=deleteReport&date=${encodeURIComponent(date)}&site=${encodeURIComponent(site)}`;
+    const res = await fetch(GAS_URL + query);
     const text = await res.text();
     let result;
     try { result = JSON.parse(text); } catch(e) { result = { status: 'error' }; }
     if (result.status === 'ok') {
-      // GAS 側は下の行から探して最初に一致した1件だけを削除するので、
-      // 画面側も同じく最後の1件だけを消す（同じ日・同じ現場が2件ある場合に表示がズレないように）
-      for (let i = allData.length - 1; i >= 0; i--) {
-        const d = String(allData[i].date || '').substring(0, 10);
-        if (d === date && allData[i].site === site) { allData.splice(i, 1); break; }
+      if (id) {
+        const idx = allData.findIndex(r => r.id === id);
+        if (idx >= 0) allData.splice(idx, 1);
+      } else {
+        // ID が無い場合、GAS 側は下の行から探して最初に一致した1件だけを削除するので、
+        // 画面側も同じく最後の1件だけを消す（表示がズレないように）
+        for (let i = allData.length - 1; i >= 0; i--) {
+          const d = String(allData[i].date || '').substring(0, 10);
+          if (d === date && allData[i].site === site) { allData.splice(i, 1); break; }
+        }
       }
       localStorage.setItem('cache_reports', JSON.stringify(allData));
       showToast('削除しました');

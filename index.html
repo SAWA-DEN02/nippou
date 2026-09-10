@@ -425,7 +425,7 @@ async function deleteWorker(val) {
 // Content-Type を text/plain にすると CORS のプリフライト（OPTIONS）が飛ばないので、
 // no-cors を使わずに済み、GAS からの応答（成功/失敗）を読める。
 // GAS 側は e.postData.contents を JSON.parse しているだけなので、GAS のコード変更は不要。
-// 戻り値 … true:成功 / false:GAS がエラーを返した / null:通信できず判定不能
+// 戻り値 … 応答オブジェクト:成功 / false:GAS がエラーを返した / null:通信できず判定不能
 async function gasPost(data) {
   try {
     const res = await fetch(GAS_URL, {
@@ -434,7 +434,8 @@ async function gasPost(data) {
       body: JSON.stringify(data)
     });
     const result = await res.json();
-    return !!(result && result.status === 'ok');
+    if (!result || result.status !== 'ok') return false;
+    return result;
   } catch(e) {
     return null;
   }
@@ -527,7 +528,12 @@ async function copyAndRegister() {
       return;
     }
     btn.textContent = '完了！';
-    showToast(ok ? 'コピー ＆ カレンダー登録 完了！' : 'コピーしました（保存結果は未確認）', 'green');
+    if (ok && ok.calendar === false) {
+      // 日報は保存できたが、カレンダー登録だけ失敗した場合
+      showToast('保存しました（カレンダー登録は失敗）', 'red');
+    } else {
+      showToast(ok ? 'コピー ＆ カレンダー登録 完了！' : 'コピーしました（保存結果は未確認）', 'green');
+    }
   } catch(e) {
     btn.textContent = 'コピー ＆ カレンダー登録';
     btn.disabled = false;

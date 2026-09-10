@@ -205,6 +205,9 @@ let selectedWorkers = [];
 let events = {};
 let sites = [];
 let workers = [];
+// schedules エンドポイントが使えるかどうか。
+// GAS が未更新なら false のままで、これまでどおり端末内保存だけで動く。
+let serverMode = false;
 
 // innerHTML に値を差し込む前に必ず通す（現場名やメモに ' " < > & が入っても壊れないようにするため）
 function escHtml(v) {
@@ -219,22 +222,26 @@ async function loadData() {
     if (cachedWorkers) workers = JSON.parse(cachedWorkers);
   } catch(e) {}
   try {
-    const saved = localStorage.getItem('schedule_events');
+    // 共有分のキャッシュを優先し、無ければ以前の端末内データを表示する
+    const saved = localStorage.getItem('cache_schedules') || localStorage.getItem('schedule_events');
     if (saved) events = JSON.parse(saved);
   } catch(e) {}
   renderLegend();
   render();
-  fetchLatest();
+  await fetchLatest();
+  await migrateLocalEvents();
 }
 
 async function fetchLatest() {
   try {
-    const [sRes, wRes] = await Promise.all([
+    const [sRes, wRes, scRes] = await Promise.all([
       fetch(GAS_URL + '?type=sites'),
-      fetch(GAS_URL + '?type=workers')
+      fetch(GAS_URL + '?type=workers'),
+      fetch(GAS_URL + '?type=schedules')
     ]);
     const sData = await sRes.json();
     const wData = await wRes.json();
+    const scData = await scRes.json();
     if (sData.status === 'ok') {
       sites = sData.data;
       localStorage.setItem('cache_sites', JSON.stringify(sites));
@@ -243,16 +250,71 @@ async function fetchLatest() {
       workers = wData.data;
       localStorage.setItem('cache_workers', JSON.stringify(workers));
     }
+    // GAS が未更新のときは unknown type が返る。その場合は端末内保存のまま動かす。
+    if (scData.status === 'ok') {
+      serverMode = true;
+      events = {};
+      scData.data.forEach(s => {
+        if (!s.date) return;
+        if (!events[s.date]) events[s.date] = [];
+        events[s.date].push({ id: s.id, site: s.site, workers: s.workers || [], memo: s.memo || '' });
+      });
+      saveEvents();
+    }
     renderLegend();
+    render();
   } catch(e) {}
 }
 
 function saveEvents() {
   try {
-    localStorage.setItem('schedule_events', JSON.stringify(events));
+    // 共有できているときは cache_schedules に、できていないときは従来どおりのキーに保存する
+    localStorage.setItem(serverMode ? 'cache_schedules' : 'schedule_events', JSON.stringify(events));
   } catch(e) {
     showToast('保存に失敗しました（端末の空き容量を確認してください）');
   }
+}
+
+// index.html と同じ方式。Content-Type を text/plain にして CORS のプリフライトを避ける。
+// 戻り値 … 応答オブジェクト:成功 / false:GAS がエラーを返した / null:通信できず判定不能
+async function gasPost(data) {
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (!result || result.status !== 'ok') return false;
+    return result;
+  } catch(e) {
+    return null;
+  }
+}
+
+// 以前この端末だけに保存されていた予定を、スプレッドシートへ移して2台で共有できるようにする。
+// 端末のデータは消さずに残すので、移行に失敗しても元の予定は無くならない。
+async function migrateLocalEvents() {
+  if (!serverMode) return;
+  if (localStorage.getItem('schedule_migrated') === 'yes') return;
+  let legacy = null;
+  try { legacy = JSON.parse(localStorage.getItem('schedule_events') || 'null'); } catch(e) {}
+  if (!legacy) return;
+  const list = [];
+  Object.keys(legacy).forEach(date => {
+    (legacy[date] || []).forEach(ev => {
+      const ws = ev.workers || (ev.worker ? [ev.worker] : []);
+      list.push({ date: date, site: ev.site, workers: ws, memo: ev.memo || '' });
+    });
+  });
+  if (list.length === 0) { localStorage.setItem('schedule_migrated', 'yes'); return; }
+  const msg = `この端末だけに保存されている予定が ${list.length} 件あります。\nスプレッドシートに移して、2台で共有できるようにしますか？\n\n（キャンセルすると次回また確認します）`;
+  if (!confirm(msg)) return;
+  const ok = await gasPost({ action: 'addSchedules', list: list });
+  if (!ok) { showToast('予定の移行に失敗しました'); return; }
+  localStorage.setItem('schedule_migrated', 'yes');
+  await fetchLatest();
+  showToast(`${list.length}件の予定を共有しました`);
 }
 
 function getWorkerColor(worker) {
@@ -396,13 +458,19 @@ function closeAddModalDirect() {
   document.getElementById('addModalBg').classList.remove('show');
 }
 
-function addEvent() {
+async function addEvent() {
   const site = document.getElementById('addSite').value;
   const memo = document.getElementById('addMemo').value.trim();
   if (!site) { alert('現場名を選択してください'); return; }
   if (selectedWorkers.length === 0) { alert('作業者を選択してください'); return; }
+  const entry = { site: site, workers: selectedWorkers.slice(), memo: memo };
+  if (serverMode) {
+    const ok = await gasPost({ action: 'addSchedule', date: selectedDate, site: site, workers: entry.workers, memo: memo });
+    if (!ok) { showToast('予定の追加に失敗しました'); return; }
+    entry.id = ok.id || '';
+  }
   if (!events[selectedDate]) events[selectedDate] = [];
-  events[selectedDate].push({ site, workers: selectedWorkers, memo });
+  events[selectedDate].push(entry);
   saveEvents();
   closeAddModalDirect();
   renderScheduleList(selectedDate);
@@ -410,11 +478,15 @@ function addEvent() {
   showToast('予定を追加しました');
 }
 
-function deleteEvent(date, idx) {
+async function deleteEvent(date, idx) {
   const target = (events[date] || [])[idx];
   if (!target) return;
   // 日報の削除には確認があるのに予定表には無く、誤タップで即消えていたため合わせる
   if (!confirm(`${formatDate(date)}\n${target.site}\n\nこの予定を削除しますか？`)) return;
+  if (serverMode && target.id) {
+    const ok = await gasPost({ action: 'deleteSchedule', id: target.id });
+    if (!ok) { showToast('予定の削除に失敗しました'); return; }
+  }
   events[date].splice(idx, 1);
   if (events[date].length === 0) delete events[date];
   saveEvents();
