@@ -34,6 +34,11 @@ function doPost(e) {
     else if (action === 'addWorker') return addItem('workers', data.value);
     else if (action === 'deleteWorker') return deleteItem('workers', data.value);
     else if (action === 'saveReport') return saveReport(data);
+    // 以前のバージョンは POST でも日報を削除できたので、そのまま受けられるように残す
+    // （古いページが端末にキャッシュされていても動くように）
+    else if (action === 'deleteReport') {
+      return deleteReport(SpreadsheetApp.openById(SHEET_ID), data.id, data.date, data.site);
+    }
     else if (action === 'addSchedule') return addSchedule(data);
     else if (action === 'addSchedules') return addSchedules(data.list);
     else if (action === 'deleteSchedule') return deleteSchedule(data.id);
