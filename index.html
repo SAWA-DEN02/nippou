@@ -100,7 +100,7 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
 .history-item:active { background: #f5f5f5; }
 .history-date { font-size: 12px; color: #999; }
 .history-preview { font-size: 13px; color: #1a1a1a; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 12px 28px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; color: #fff; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 12px 22px; border-radius: 20px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; max-width: 86vw; text-align: center; line-height: 1.5; color: #fff; }
 .toast.show { opacity: 1; }
 .toast.green { background: #1D9E75; }
 .toast.red { background: #e53935; }
@@ -548,7 +548,7 @@ async function addSite() {
   if (sites.includes(val)) { showToast('その現場名は既に登録されています', 'red'); return; }
   input.value = '';
   const ok = await gasPost({ action: 'addSite', value: val });
-  if (ok === false) { showToast('現場名の追加に失敗しました', 'red'); return; }
+  if (ok === false) { showToast(gasErrorText(lastGasError, '現場名の追加に失敗しました'), 'red'); return; }
   sites.push(val);
   renderSiteSelect();
   renderSiteList();
@@ -558,7 +558,7 @@ async function addSite() {
 async function deleteSite(val) {
   if (!confirm(`現場名「${val}」を削除しますか？`)) return;
   const ok = await gasPost({ action: 'deleteSite', value: val });
-  if (ok === false) { showToast('現場名の削除に失敗しました', 'red'); return; }
+  if (ok === false) { showToast(gasErrorText(lastGasError, '現場名の削除に失敗しました'), 'red'); return; }
   sites = sites.filter(s => s !== val);
   renderSiteSelect();
   renderSiteList();
@@ -572,7 +572,7 @@ async function addWorker() {
   if (workers.includes(val)) { showToast('その作業者は既に登録されています', 'red'); return; }
   input.value = '';
   const ok = await gasPost({ action: 'addWorker', value: val });
-  if (ok === false) { showToast('作業者の追加に失敗しました', 'red'); return; }
+  if (ok === false) { showToast(gasErrorText(lastGasError, '作業者の追加に失敗しました'), 'red'); return; }
   workers.push(val);
   renderWorkerPills();
   renderWorkerList();
@@ -582,7 +582,7 @@ async function addWorker() {
 async function deleteWorker(val) {
   if (!confirm(`作業者「${val}」を削除しますか？`)) return;
   const ok = await gasPost({ action: 'deleteWorker', value: val });
-  if (ok === false) { showToast('作業者の削除に失敗しました', 'red'); return; }
+  if (ok === false) { showToast(gasErrorText(lastGasError, '作業者の削除に失敗しました'), 'red'); return; }
   selectedWorkers = selectedWorkers.filter(w => w !== val);
   workers = workers.filter(w => w !== val);
   renderWorkerPills();
@@ -590,11 +590,25 @@ async function deleteWorker(val) {
   showToast(ok ? '作業者を削除しました' : '削除しました（通信結果は未確認）', 'green');
 }
 
+// 直前の gasPost で GAS が返したエラー内容
+let lastGasError = '';
+
+// GAS のエラーを、原因の見当がつく言葉に置き換える。
+// Googleドライブの容量が上限を超えると、読み取りはできるのに書き込みだけが
+// 「ドキュメントにアクセスする権限がありません」で失敗するため、そこを案内する。
+function gasErrorText(message, fallback) {
+  if (/権限|permission/i.test(String(message || ''))) {
+    return 'Googleドライブの容量オーバーで保存できません。容量を空けてから試してください';
+  }
+  return fallback;
+}
+
 // Content-Type を text/plain にすると CORS のプリフライト（OPTIONS）が飛ばないので、
 // no-cors を使わずに済み、GAS からの応答（成功/失敗）を読める。
 // GAS 側は e.postData.contents を JSON.parse しているだけなので、GAS のコード変更は不要。
 // 戻り値 … 応答オブジェクト:成功 / false:GAS がエラーを返した / null:通信できず判定不能
 async function gasPost(data) {
+  lastGasError = '';
   try {
     const res = await fetch(GAS_URL, {
       method: 'POST',
@@ -602,7 +616,10 @@ async function gasPost(data) {
       body: JSON.stringify(data)
     });
     const result = await res.json();
-    if (!result || result.status !== 'ok') return false;
+    if (!result || result.status !== 'ok') {
+      lastGasError = (result && result.message) || '';
+      return false;
+    }
     return result;
   } catch(e) {
     return null;
@@ -693,7 +710,7 @@ async function copyAndRegister() {
     if (ok === false) {
       btn.textContent = 'コピー ＆ カレンダー登録';
       btn.disabled = false;
-      showToast('コピーはできましたが、保存に失敗しました', 'red');
+      showToast(gasErrorText(lastGasError, 'コピーはできましたが、保存に失敗しました'), 'red');
       return;
     }
     btn.textContent = '完了！';

@@ -78,7 +78,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .form-btn.primary { background: #1D9E75; border-color: #0F6E56; color: #fff; }
 .form-btn:active { opacity: 0.8; }
 
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 12px 28px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; color: #fff; background: #1D9E75; box-shadow: 0 0 12px rgba(29,158,117,0.5); }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 12px 22px; border-radius: 20px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; max-width: 86vw; text-align: center; line-height: 1.5; color: #fff; background: #1D9E75; box-shadow: 0 0 12px rgba(29,158,117,0.5); }
 .toast.show { opacity: 1; }
 </style>
 </head>
@@ -275,9 +275,23 @@ function saveEvents() {
   }
 }
 
+// 直前の gasPost で GAS が返したエラー内容
+let lastGasError = '';
+
+// GAS のエラーを、原因の見当がつく言葉に置き換える。
+// Googleドライブの容量が上限を超えると、読み取りはできるのに書き込みだけが
+// 「ドキュメントにアクセスする権限がありません」で失敗するため、そこを案内する。
+function gasErrorText(message, fallback) {
+  if (/権限|permission/i.test(String(message || ''))) {
+    return 'Googleドライブの容量オーバーで保存できません。容量を空けてから試してください';
+  }
+  return fallback;
+}
+
 // index.html と同じ方式。Content-Type を text/plain にして CORS のプリフライトを避ける。
 // 戻り値 … 応答オブジェクト:成功 / false:GAS がエラーを返した / null:通信できず判定不能
 async function gasPost(data) {
+  lastGasError = '';
   try {
     const res = await fetch(GAS_URL, {
       method: 'POST',
@@ -285,7 +299,10 @@ async function gasPost(data) {
       body: JSON.stringify(data)
     });
     const result = await res.json();
-    if (!result || result.status !== 'ok') return false;
+    if (!result || result.status !== 'ok') {
+      lastGasError = (result && result.message) || '';
+      return false;
+    }
     return result;
   } catch(e) {
     return null;
@@ -311,7 +328,7 @@ async function migrateLocalEvents() {
   const msg = `この端末だけに保存されている予定が ${list.length} 件あります。\nスプレッドシートに移して、2台で共有できるようにしますか？\n\n（キャンセルすると次回また確認します）`;
   if (!confirm(msg)) return;
   const ok = await gasPost({ action: 'addSchedules', list: list });
-  if (!ok) { showToast('予定の移行に失敗しました'); return; }
+  if (!ok) { showToast(gasErrorText(lastGasError, '予定の移行に失敗しました')); return; }
   localStorage.setItem('schedule_migrated', 'yes');
   await fetchLatest();
   showToast(`${list.length}件の予定を共有しました`);
@@ -466,7 +483,7 @@ async function addEvent() {
   const entry = { site: site, workers: selectedWorkers.slice(), memo: memo };
   if (serverMode) {
     const ok = await gasPost({ action: 'addSchedule', date: selectedDate, site: site, workers: entry.workers, memo: memo });
-    if (!ok) { showToast('予定の追加に失敗しました'); return; }
+    if (!ok) { showToast(gasErrorText(lastGasError, '予定の追加に失敗しました')); return; }
     entry.id = ok.id || '';
   }
   if (!events[selectedDate]) events[selectedDate] = [];
@@ -485,7 +502,7 @@ async function deleteEvent(date, idx) {
   if (!confirm(`${formatDate(date)}\n${target.site}\n\nこの予定を削除しますか？`)) return;
   if (serverMode && target.id) {
     const ok = await gasPost({ action: 'deleteSchedule', id: target.id });
-    if (!ok) { showToast('予定の削除に失敗しました'); return; }
+    if (!ok) { showToast(gasErrorText(lastGasError, '予定の削除に失敗しました')); return; }
   }
   events[date].splice(idx, 1);
   if (events[date].length === 0) delete events[date];

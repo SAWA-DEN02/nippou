@@ -144,7 +144,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   </div>
 </div>
 
-<div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 28px;border-radius:99px;font-size:14px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;white-space:nowrap;color:#fff;background:#1D9E75;"></div>
+<div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 22px;border-radius:20px;font-size:14px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;max-width:86vw;text-align:center;line-height:1.5;color:#fff;background:#1D9E75;"></div>
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyFkpTdMK815NKHOgawnBzSs6CYLKudXZMunQsD2aBZG0d6FsdDZWmWIwhuii7S-AEy/exec';
@@ -157,6 +157,16 @@ let currentTab = 'summary';
 // closing では締め日（20日）が入っている月をその期間の呼び名にする（8/21〜9/20 なら9月分）。
 let periodMode = 'month';
 try { periodMode = localStorage.getItem('period_mode') === 'closing' ? 'closing' : 'month'; } catch(e) {}
+
+// GAS のエラーを、原因の見当がつく言葉に置き換える。
+// Googleドライブの容量が上限を超えると、読み取りはできるのに書き込みだけが
+// 「ドキュメントにアクセスする権限がありません」で失敗するため、そこを案内する。
+function gasErrorText(message, fallback) {
+  if (/権限|permission/i.test(String(message || ''))) {
+    return 'Googleドライブの容量オーバーで削除できません。容量を空けてから試してください';
+  }
+  return fallback;
+}
 
 // innerHTML に値を差し込む前に必ず通す（現場名や作業者名に ' " < > & が入っても壊れないようにするため）
 function escHtml(v) {
@@ -510,7 +520,7 @@ async function deleteReport(id, date, site) {
       showToast('削除しました');
       render();
     } else {
-      showToast('削除に失敗しました');
+      showToast(gasErrorText(result && result.message, '削除に失敗しました'));
     }
   } catch(e) {
     showToast('削除に失敗しました');
