@@ -225,12 +225,17 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
   <div class="section">
     <label>現場名</label>
     <div class="select-wrap">
-      <select id="siteName">
+      <select id="siteName" onchange="onSiteChange()">
         <option value="">選択してください</option>
       </select>
       <svg class="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M4 6l4 4 4-4" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
+    </div>
+    <!-- 一覧に無い現場を手入力する欄。日報を保存するときに現場一覧にも登録される -->
+    <div id="newSiteWrap" style="display:none;margin-top:8px;">
+      <input type="text" id="newSiteInput" placeholder="現場名を入力（例：〇〇ビル新築工事）">
+      <p class="hint" style="text-align:left;margin-top:6px;">日報を保存すると、この現場名が一覧にも登録されます</p>
     </div>
   </div>
   <div class="section">
@@ -695,6 +700,35 @@ function renderSiteSelect() {
     if (s === val) opt.selected = true;
     sel.appendChild(opt);
   });
+  // 一覧に無い現場は、これを選ぶと手入力できる
+  const opt = document.createElement('option');
+  opt.value = NEW_SITE; opt.textContent = '＋ 一覧に無い現場を入力する';
+  if (val === NEW_SITE) opt.selected = true;
+  sel.appendChild(opt);
+  onSiteChange();
+}
+
+const NEW_SITE = '__new_site__';
+
+function onSiteChange() {
+  const isNew = document.getElementById('siteName').value === NEW_SITE;
+  document.getElementById('newSiteWrap').style.display = isNew ? 'block' : 'none';
+}
+
+// 日報に使う現場名。手入力のときは入力欄の値を返す
+function getInputSite() {
+  const v = document.getElementById('siteName').value;
+  return v === NEW_SITE ? document.getElementById('newSiteInput').value.trim() : v;
+}
+
+// 手入力した現場が一覧に無ければ登録する。日報の保存は止めない（失敗しても日報は保存する）
+async function registerSiteIfNew(site) {
+  if (!site || sites.includes(site)) return true;
+  const ok = await gasPost({ action: 'addSite', value: site });
+  if (ok === false) return false;
+  sites.push(site);
+  renderSiteList();
+  return true;
 }
 
 function renderWorkerPills() {
@@ -832,7 +866,7 @@ function addTask() {
 }
 
 function removeTask(btn) {
-  const rows = document.querySelectorAll('.task-row');
+  const rows = document.querySelectorAll('#taskList .task-row');
   if (rows.length > 1) btn.parentElement.remove();
 }
 
@@ -845,15 +879,18 @@ function formatDate(dateStr) {
 
 function generateReport() {
   const date = document.getElementById('reportDate').value;
-  const site = document.getElementById('siteName').value;
+  const site = getInputSite();
   const start = document.getElementById('startTime').value;
   const end = document.getElementById('endTime').value;
-  const tasks = Array.from(document.querySelectorAll('.task-row textarea')).map(t => t.value.trim()).filter(Boolean);
+  const tasks = Array.from(document.querySelectorAll('#taskList .task-row textarea')).map(t => t.value.trim()).filter(Boolean);
   const parking = document.getElementById('parking').value;
   const highway = document.getElementById('highway').value;
   const notes = document.getElementById('notes').value.trim();
   if (!date) { alert('日付を選択してください'); return; }
-  if (!site) { alert('現場名を選択してください'); return; }
+  if (!site) {
+    alert(document.getElementById('siteName').value === NEW_SITE ? '現場名を入力してください' : '現場名を選択してください');
+    return;
+  }
   if (selectedWorkers.length === 0) { alert('作業者を選択してください'); return; }
   if (tasks.length === 0) { alert('作業内容を1つ以上入力してください'); return; }
   const dateLabel = formatDate(date);
@@ -891,6 +928,8 @@ async function copyAndRegister() {
   });
   try {
     await doCopy();
+    // 手入力した新しい現場なら、日報より先に現場一覧へ登録する
+    const siteOk = await registerSiteIfNew(currentReport.site);
     const ok = await gasPost({
       action: 'saveReport',
       title: `日報 ${currentReport.site}`,
@@ -911,7 +950,9 @@ async function copyAndRegister() {
       return;
     }
     btn.textContent = '完了！';
-    if (ok && ok.calendar === false) {
+    if (ok && !siteOk) {
+      showToast('日報は保存しましたが、現場の登録に失敗しました', 'red');
+    } else if (ok && ok.calendar === false) {
       // 日報は保存できたが、カレンダー登録だけ失敗した場合
       showToast('保存しました（カレンダー登録は失敗）', 'red');
     } else {
@@ -941,6 +982,8 @@ function showToast(msg, color) {
 function clearForm() {
   document.getElementById('reportDate').value = `${yyyy}-${mm}-${dd}`;
   document.getElementById('siteName').value = '';
+  document.getElementById('newSiteInput').value = '';
+  onSiteChange();
   ['startTime','endTime','parking','highway','notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('taskList').innerHTML = '';
   document.getElementById('outputArea').style.display = 'none';
@@ -975,14 +1018,21 @@ function loadHistory() {
 function loadEntry(i) {
   const h = window._history[i];
   document.getElementById('reportDate').value = h.date;
-  document.getElementById('siteName').value = h.site || '';
+  // 一覧に無い現場（手入力した現場）の日報なら、手入力欄に入れて開く
+  if (h.site && sites.length > 0 && !sites.includes(h.site)) {
+    document.getElementById('siteName').value = NEW_SITE;
+    document.getElementById('newSiteInput').value = h.site;
+  } else {
+    document.getElementById('siteName').value = h.site || '';
+  }
+  onSiteChange();
   document.getElementById('startTime').value = h.start || '';
   document.getElementById('endTime').value = h.end || '';
   document.getElementById('parking').value = h.parking || '';
   document.getElementById('highway').value = h.highway || '';
   document.getElementById('notes').value = h.notes || '';
   document.getElementById('taskList').innerHTML = '';
-  (h.tasks||[]).forEach(t => { addTask(); const rows = document.querySelectorAll('.task-row textarea'); rows[rows.length-1].value = t; });
+  (h.tasks||[]).forEach(t => { addTask(); const rows = document.querySelectorAll('#taskList .task-row textarea'); rows[rows.length-1].value = t; });
   selectedWorkers = h.workers || [];
   renderWorkerPills();
   document.getElementById('reportOutput').textContent = h.report;

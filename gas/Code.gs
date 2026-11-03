@@ -301,7 +301,9 @@ function joinWorkers(workers) {
 function addItem(sheetName, value) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sheet = getOrCreateSheet(ss, sheetName);
-  sheet.appendRow([value]);
+  // 日報入力から誰でも現場を登録できるので、2台で同時に同じ名前を登録しても重複させない
+  const exists = sheet.getDataRange().getValues().some(row => String(row[0]) === String(value));
+  if (!exists) sheet.appendRow([value]);
   return respond({ status: 'ok' });
 }
 
