@@ -34,6 +34,7 @@ function doPost(e) {
     else if (action === 'addWorker') return addItem('workers', data.value);
     else if (action === 'deleteWorker') return deleteItem('workers', data.value);
     else if (action === 'saveReport') return saveReport(data);
+    else if (action === 'updateReport') return updateReport(data);
     // 以前のバージョンは POST でも日報を削除できたので、そのまま受けられるように残す
     // （古いページが端末にキャッシュされていても動くように）
     else if (action === 'deleteReport') {
@@ -144,6 +145,38 @@ function saveReport(data) {
     data.parking, data.highway, data.notes, id, eventId
   ]);
   return respond({ status: 'ok', id: id, calendar: eventId !== '' });
+}
+
+// 集計アプリの「編集」から呼ばれる。ID で1行を特定して A〜H列を書き換え、
+// 古いカレンダーの予定を消して、新しい内容で登録し直す（日付や現場名が変わっても追従するため）。
+function updateReport(data) {
+  if (!data.id) return respond({ status: 'error', message: 'id required' });
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = getOrCreateSheet(ss, 'reports');
+  ensureReportSheet(sheet);
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][REPORT_ID_COL - 1] || '') !== String(data.id)) continue;
+    const rowNum = i + 1;
+
+    // 先にシートを書き換える（カレンダーで失敗しても日報の修正は必ず残す）
+    sheet.getRange(rowNum, 1, 1, 8).setValues([[
+      data.date, data.site, data.workers, data.timeStr, data.tasks,
+      data.parking, data.highway, data.notes
+    ]]);
+
+    deleteCalendarEvent(toDateStr(rows[i][0]), String(rows[i][1] || ''), String(rows[i][REPORT_EVENT_COL - 1] || ''));
+    let eventId = '';
+    try {
+      const calendar = CalendarApp.getDefaultCalendar();
+      const start = new Date(data.date + 'T00:00:00');
+      const event = calendar.createAllDayEvent(data.title, start, { description: data.detail });
+      eventId = event.getId();
+    } catch(err) {}
+    sheet.getRange(rowNum, REPORT_EVENT_COL).setValue(eventId);
+    return respond({ status: 'ok', calendar: eventId !== '' });
+  }
+  return respond({ status: 'error', message: 'not found' });
 }
 
 function deleteReport(ss, id, date, site) {
