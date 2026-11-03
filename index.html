@@ -112,6 +112,8 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
 .setting-item .name { flex: 1; padding: 12px 14px; background: #fff; border: 1px solid #ddd; border-radius: 12px; font-size: 15px; color: #1a1a1a; }
 .setting-item .del { background: #fff; border: 1px solid #ddd; border-radius: 10px; width: 44px; height: 44px; cursor: pointer; color: #e53935; font-size: 16px; flex-shrink: 0; }
 .setting-item .del:active { background: #fee; }
+.out-btn.sub-btn { background: #fff; color: #1D9E75; border: 1px solid #1D9E75; }
+.edit-modal .section { margin-bottom: 14px; }
 </style>
 </head>
 <body>
@@ -330,6 +332,63 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
     <div class="rep-text" id="repModalText"></div>
     <div class="out-actions">
       <button class="out-btn main-btn" onclick="copyReportText()">コピー</button>
+      <button class="out-btn sub-btn" onclick="openEditReport()">✏️ この日報を修正する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 保存済みの日報を修正する画面 -->
+<div class="rep-modal-bg" id="editModalBg" onclick="if (event.target === this) closeEditReport()">
+  <div class="rep-modal edit-modal">
+    <div class="rep-modal-header">
+      <div class="rep-modal-title">日報を修正</div>
+      <button class="rep-modal-close" onclick="closeEditReport()">×</button>
+    </div>
+    <div class="section">
+      <label>日付</label>
+      <input type="date" id="efDate">
+    </div>
+    <div class="section">
+      <label>現場名</label>
+      <div class="select-wrap">
+        <select id="efSite"></select>
+        <svg class="arrow-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="section">
+      <label>作業者（複数選択可）</label>
+      <div class="pills" id="efWorkers"></div>
+    </div>
+    <div class="section">
+      <label>作業時間</label>
+      <div class="time-row">
+        <input type="time" id="efStart">
+        <span class="time-sep">〜</span>
+        <input type="time" id="efEnd">
+      </div>
+    </div>
+    <div class="section">
+      <label>作業内容</label>
+      <div id="efTasks"></div>
+      <button class="add-btn" onclick="addEditTask('')">＋ 作業を追加</button>
+    </div>
+    <div class="section">
+      <label>駐車場代（円）</label>
+      <input type="number" id="efParking" placeholder="例：500">
+    </div>
+    <div class="section">
+      <label>高速代（円）</label>
+      <input type="number" id="efHighway" placeholder="例：1000">
+    </div>
+    <div class="section">
+      <label>備考</label>
+      <textarea id="efNotes"></textarea>
+    </div>
+    <div class="out-actions">
+      <button class="out-btn main-btn" id="efSaveBtn" onclick="saveEditReport()">修正を保存</button>
+      <p class="hint">スプレッドシートとカレンダーの両方が修正されます</p>
     </div>
   </div>
 </div>
@@ -438,9 +497,12 @@ function buildReportText(row) {
   return text;
 }
 
+let viewDetailRow = null; // いま開いている日報（「修正する」で使う）
+
 function openReportDetail(i) {
   const r = viewRows[i];
   if (!r) return;
+  viewDetailRow = r;
   viewDetailText = buildReportText(r);
   document.getElementById('repModalTitle').textContent = formatDate(String(r.date || '').substring(0, 10));
   // textContent で入れるので、現場名などに記号が入っていても崩れない
@@ -467,6 +529,141 @@ async function copyReportText() {
     fallbackCopy(viewDetailText);
   }
   showToast('コピーしました', 'green');
+}
+
+/* ---------- 保存済みの日報の修正 ---------- */
+
+let editingId = '';
+let editWorkers = [];
+
+async function openEditReport() {
+  const row = viewDetailRow;
+  if (!row || !row.id) {
+    showToast('この日報は修正できません。画面を開き直してから試してください', 'red');
+    return;
+  }
+  editingId = row.id;
+  // 現場名・作業者の一覧は日報入力画面を開いたときにしか取っていないので、無ければここで取る
+  if (sites.length === 0 || workers.length === 0) await loadFromServer();
+
+  document.getElementById('efDate').value = String(row.date || '').substring(0, 10).replace(/\//g, '-');
+
+  // 一覧から消された現場名でも、元の値を選べるように残す
+  const site = String(row.site || '');
+  const siteOptions = sites.includes(site) || !site ? sites : [site, ...sites];
+  document.getElementById('efSite').innerHTML = siteOptions.map(s =>
+    `<option value="${escHtml(s)}"${s === site ? ' selected' : ''}>${escHtml(s)}</option>`).join('');
+
+  editWorkers = String(row.workers || '').split('、').map(w => w.trim()).filter(Boolean);
+  renderEditWorkers();
+
+  // 作業時間は「08:00 〜 17:00」「08:00 〜」「―」のどれかで保存されている
+  const times = String(row.timeStr || '').match(/\d{1,2}:\d{2}/g) || [];
+  document.getElementById('efStart').value = times[0] ? times[0].padStart(5, '0') : '';
+  document.getElementById('efEnd').value = times[1] ? times[1].padStart(5, '0') : '';
+
+  document.getElementById('efTasks').innerHTML = '';
+  const tasks = String(row.tasks || '').split('\n').map(t => t.trim()).filter(Boolean);
+  (tasks.length ? tasks : ['']).forEach(t => addEditTask(t));
+
+  document.getElementById('efParking').value = Number(row.parking) > 0 ? Number(row.parking) : '';
+  document.getElementById('efHighway').value = Number(row.highway) > 0 ? Number(row.highway) : '';
+  document.getElementById('efNotes').value = row.notes || '';
+
+  const btn = document.getElementById('efSaveBtn');
+  btn.disabled = false;
+  btn.textContent = '修正を保存';
+  closeReportDetailDirect();
+  document.getElementById('editModalBg').classList.add('show');
+}
+
+function closeEditReport() {
+  document.getElementById('editModalBg').classList.remove('show');
+}
+
+function renderEditWorkers() {
+  // 登録済みの作業者に加えて、日報に入っているが一覧から外れた作業者も出す
+  const names = [...workers];
+  editWorkers.forEach(w => { if (!names.includes(w)) names.push(w); });
+  document.getElementById('efWorkers').innerHTML = names.map(n =>
+    `<button class="pill${editWorkers.includes(n) ? ' active' : ''}" data-name="${escHtml(n)}" onclick="toggleEditWorker(this.dataset.name)">${escHtml(n)}</button>`).join('');
+}
+
+function toggleEditWorker(name) {
+  const i = editWorkers.indexOf(name);
+  if (i >= 0) editWorkers.splice(i, 1);
+  else editWorkers.push(name);
+  renderEditWorkers();
+}
+
+function addEditTask(value) {
+  const row = document.createElement('div');
+  row.className = 'task-row';
+  row.innerHTML = `<textarea placeholder="作業内容を入力"></textarea><button class="del-btn" onclick="removeEditTask(this)">✕</button>`;
+  row.querySelector('textarea').value = value;
+  document.getElementById('efTasks').appendChild(row);
+}
+
+function removeEditTask(btn) {
+  if (document.querySelectorAll('#efTasks .task-row').length > 1) btn.parentElement.remove();
+}
+
+async function saveEditReport() {
+  const date = document.getElementById('efDate').value;
+  const site = document.getElementById('efSite').value;
+  const start = document.getElementById('efStart').value;
+  const end = document.getElementById('efEnd').value;
+  const tasks = Array.from(document.querySelectorAll('#efTasks textarea')).map(t => t.value.trim()).filter(Boolean);
+  const parking = document.getElementById('efParking').value;
+  const highway = document.getElementById('efHighway').value;
+  const notes = document.getElementById('efNotes').value.trim();
+  if (!date) { alert('日付を選択してください'); return; }
+  if (!site) { alert('現場名を選択してください'); return; }
+  if (editWorkers.length === 0) { alert('作業者を選択してください'); return; }
+  if (tasks.length === 0) { alert('作業内容を1つ以上入力してください'); return; }
+
+  const updated = {
+    id: editingId,
+    date, site,
+    workers: editWorkers.join('、'),
+    timeStr: (start && end) ? `${start} 〜 ${end}` : (start ? `${start} 〜` : '―'),
+    tasks: tasks.join('\n'),
+    parking, highway, notes
+  };
+
+  const btn = document.getElementById('efSaveBtn');
+  btn.disabled = true;
+  btn.textContent = '保存中...';
+  const result = await gasPost({
+    action: 'updateReport',
+    title: `日報 ${site}`,
+    detail: buildReportText(updated),
+    ...updated
+  });
+  if (!result) {
+    btn.disabled = false;
+    btn.textContent = '修正を保存';
+    const msg = result === null
+      ? '通信できませんでした。電波の良いところで試してください'
+      : (lastGasError === 'not found'
+          ? 'この日報は見つかりませんでした（他の人が削除したかもしれません）'
+          : gasErrorText(lastGasError, '保存に失敗しました'));
+    showToast(msg, 'red');
+    return;
+  }
+
+  // 画面とキャッシュも新しい内容にする
+  const idx = viewReports.findIndex(r => r.id === editingId);
+  if (idx >= 0) viewReports[idx] = { ...viewReports[idx], ...updated };
+  try { localStorage.setItem('cache_reports', JSON.stringify(viewReports)); } catch(e) {}
+  closeEditReport();
+  // 修正した月を表示して、修正後の日報を開く（そのままコピーしてLINEに送り直せるように）
+  const d = new Date(date + 'T00:00:00');
+  viewMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+  renderViewList();
+  const newIdx = viewRows.findIndex(r => r.id === editingId);
+  if (newIdx >= 0) openReportDetail(newIdx);
+  showToast(result.calendar === false ? '修正しました（カレンダー登録は失敗）' : '修正しました！', result.calendar === false ? 'red' : 'green');
 }
 
 async function loadFromServer() {
