@@ -106,6 +106,9 @@ select.ef-input option { background: #1a1a2e; }
 .ef-add { background: none; border: 1px dashed rgba(29,158,117,0.5); border-radius: 10px; color: #1D9E75; font-size: 13px; padding: 8px; width: 100%; cursor: pointer; }
 .ef-save { margin-top: 22px; width: 100%; padding: 14px; border-radius: 12px; border: none; background: #1D9E75; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 0 12px rgba(29,158,117,0.5); }
 .ef-save:disabled { opacity: 0.5; }
+.ef-bento { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding: 12px; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; background: rgba(255,255,255,0.06); color: #fff; font-size: 15px; cursor: pointer; }
+.ef-bento input { width: 20px; height: 20px; accent-color: #1D9E75; flex-shrink: 0; }
+.bento-dates { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.7; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px; }
 </style>
 </head>
 <body>
@@ -192,6 +195,7 @@ select.ef-input option { background: #1a1a2e; }
     <input type="number" inputmode="numeric" class="ef-input" id="efHighway" placeholder="例：1530">
     <div class="ef-label">備考</div>
     <textarea class="ef-input" id="efNotes"></textarea>
+    <label class="ef-bento"><input type="checkbox" id="efBento">🍱 お弁当を作ってもらった</label>
     <button class="ef-save" id="efSaveBtn" onclick="saveEdit()">保存する</button>
   </div>
 </div>
@@ -357,6 +361,7 @@ function renderSummary(monthData) {
         <div class="summary-label">現場数</div>
       </div>
     </div>
+    ${renderBento(monthData)}
     <div class="section-title">作業者別</div>
   `;
 
@@ -382,6 +387,24 @@ function renderSummary(monthData) {
   html += renderSiteLegend(siteMap, siteOrder);
 
   document.getElementById('content').innerHTML = html;
+}
+
+// お弁当を作ってもらった日の集計。同じ日に現場が2件あっても1日と数える。
+function renderBento(monthData) {
+  const days = [...new Set(monthData.filter(r => r.bento)
+    .map(r => String(r.date || '').substring(0, 10).replace(/\//g, '-')))].sort();
+  const dates = days.map(d => {
+    const x = parseYmd(d);
+    return `${x.getMonth() + 1}/${x.getDate()}（${['日','月','火','水','木','金','土'][x.getDay()]}）`;
+  }).join('、');
+  return `
+    <div class="card">
+      <div class="card-header" style="${days.length ? '' : 'margin-bottom:0;'}">
+        <div class="card-name">🍱 お弁当</div>
+        <div class="card-total">${days.length}<span>日</span></div>
+      </div>
+      ${days.length ? `<div class="bento-dates">${escHtml(dates)}</div>` : ''}
+    </div>`;
 }
 
 const SITE_COLORS = [
@@ -451,7 +474,7 @@ function renderCalendar(data, p, siteOrder) {
     const tap = rows.length > 0
       ? ` data-date="${escHtml(key)}" onclick="openDayModal(this.dataset.date)"`
       : '';
-    html += `<div class="cal-day${cls}${rows.length > 0 ? ' has' : ''}"${tap}><div class="cal-num">${d.getDate()}</div>${chips}${more}</div>`;
+    html += `<div class="cal-day${cls}${rows.length > 0 ? ' has' : ''}"${tap}><div class="cal-num">${d.getDate()}${rows.some(r => r.bento) ? ' 🍱' : ''}</div>${chips}${more}</div>`;
   }
   return html + '</div>';
 }
@@ -478,6 +501,7 @@ function openDayModal(dateStr) {
         ${line('駐車場代', yen(r.parking))}
         ${line('高速代', yen(r.highway))}
         ${line('備考', r.notes)}
+        ${line('お弁当', r.bento ? '🍱 あり' : '')}
       </div>`;
     }).join('');
   }
@@ -526,7 +550,7 @@ function renderLog(monthData) {
       <div class="log-item">
         <div class="log-info">
           <div class="log-date">${escHtml(dateLabel)}</div>
-          <div class="log-site">${escHtml(row.site)}</div>
+          <div class="log-site">${escHtml(row.site)}${row.bento ? ' 🍱' : ''}</div>
           <div class="log-worker">${escHtml(row.workers)}</div>
         </div>
         <div class="log-btns">
@@ -639,6 +663,7 @@ async function openEditModal(id) {
   document.getElementById('efParking').value = Number(row.parking) > 0 ? Number(row.parking) : '';
   document.getElementById('efHighway').value = Number(row.highway) > 0 ? Number(row.highway) : '';
   document.getElementById('efNotes').value = row.notes || '';
+  document.getElementById('efBento').checked = !!row.bento;
 
   const btn = document.getElementById('efSaveBtn');
   btn.disabled = false;
@@ -712,7 +737,8 @@ async function saveEdit() {
     workers: editWorkers.join('、'),
     timeStr: (start && end) ? `${start} 〜 ${end}` : (start ? `${start} 〜` : '―'),
     tasks: tasks.join('\n'),
-    parking, highway, notes
+    parking, highway, notes,
+    bento: document.getElementById('efBento').checked
   };
 
   const btn = document.getElementById('efSaveBtn');

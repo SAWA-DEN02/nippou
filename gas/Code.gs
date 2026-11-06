@@ -11,7 +11,7 @@
  *   workers   … A:作業者名
  *   rates     … A:作業者名 B:単価
  *   reports   … A:日付 B:現場名 C:作業者 D:作業時間 E:作業内容
- *                F:駐車場代 G:高速代 H:備考 I:ID J:カレンダーID
+ *                F:駐車場代 G:高速代 H:備考 I:ID J:カレンダーID K:お弁当
  *   schedules … A:ID B:日付 C:現場名 D:作業者 E:メモ
  *
  * I列（ID）と J列（カレンダーID）は後から追加した列です。
@@ -20,9 +20,10 @@
 
 const SHEET_ID = '1rH_3zr9JV6kin6sC71X21OObh--ZLr8qVRpeTDCZYWE';
 
-const REPORT_HEADER = ['日付', '現場名', '作業者', '作業時間', '作業内容', '駐車場代', '高速代', '備考', 'ID', 'カレンダーID'];
+const REPORT_HEADER = ['日付', '現場名', '作業者', '作業時間', '作業内容', '駐車場代', '高速代', '備考', 'ID', 'カレンダーID', 'お弁当'];
 const REPORT_ID_COL = 9;     // I列
 const REPORT_EVENT_COL = 10; // J列
+const REPORT_BENTO_COL = 11; // K列（お弁当を作ってもらった日は 🍱 が入る）
 const SCHEDULE_HEADER = ['ID', '日付', '現場名', '作業者', 'メモ'];
 
 function doPost(e) {
@@ -76,7 +77,8 @@ function doGet(e) {
         tasks: row[4],
         parking: row[5],
         highway: row[6],
-        notes: row[7]
+        notes: row[7],
+        bento: !!row[REPORT_BENTO_COL - 1]
       }));
       return respond({ status: 'ok', data: data });
     } else if (type === 'schedules') {
@@ -142,7 +144,7 @@ function saveReport(data) {
 
   sheet.appendRow([
     data.date, data.site, data.workers, data.timeStr, data.tasks,
-    data.parking, data.highway, data.notes, id, eventId
+    data.parking, data.highway, data.notes, id, eventId, data.bento ? '🍱' : ''
   ]);
   return respond({ status: 'ok', id: id, calendar: eventId !== '' });
 }
@@ -164,6 +166,11 @@ function updateReport(data) {
       data.date, data.site, data.workers, data.timeStr, data.tasks,
       data.parking, data.highway, data.notes
     ]]);
+
+    // 古いページがキャッシュに残っていて bento を送ってこないときは、今の値を消さない
+    if (data.bento !== undefined) {
+      sheet.getRange(rowNum, REPORT_BENTO_COL).setValue(data.bento ? '🍱' : '');
+    }
 
     deleteCalendarEvent(toDateStr(rows[i][0]), String(rows[i][1] || ''), String(rows[i][REPORT_EVENT_COL - 1] || ''));
     let eventId = '';
@@ -231,6 +238,7 @@ function ensureReportSheet(sheet) {
   const header = sheet.getRange(1, 1, 1, REPORT_HEADER.length).getValues()[0];
   if (!header[REPORT_ID_COL - 1]) sheet.getRange(1, REPORT_ID_COL).setValue('ID');
   if (!header[REPORT_EVENT_COL - 1]) sheet.getRange(1, REPORT_EVENT_COL).setValue('カレンダーID');
+  if (!header[REPORT_BENTO_COL - 1]) sheet.getRange(1, REPORT_BENTO_COL).setValue('お弁当');
 }
 
 // ID が無い既存の日報に採番する（初回の読み込みのときだけ書き込みが走る）

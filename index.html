@@ -114,6 +114,9 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
 .setting-item .del:active { background: #fee; }
 .out-btn.sub-btn { background: #fff; color: #1D9E75; border: 1px solid #1D9E75; }
 .edit-modal .section { margin-bottom: 14px; }
+.bento-toggle { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border: 1px solid #ddd; border-radius: 12px; background: #fff; color: #1a1a1a; font-size: 15px; font-weight: 400; letter-spacing: 0; margin-bottom: 0; cursor: pointer; }
+.bento-toggle input { width: 20px; height: 20px; accent-color: #1D9E75; flex-shrink: 0; }
+.bento-toggle:has(input:checked) { background: #E1F5EE; border-color: #1D9E75; color: #0F6E56; font-weight: 500; }
 </style>
 </head>
 <body>
@@ -202,7 +205,8 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
       </div>
       <div class="arr">›</div>
     </div>
-    <div class="top-card" onclick="showPage('settingsPage')">
+    <!-- 管理者モードの端末にだけ表示する（applyAdminMode で切り替え） -->
+    <div class="top-card" id="adminCard" style="display:none;" onclick="showPage('settingsPage')">
       <div class="icon gray">🏗</div>
       <div class="card-text">
         <h3>現場・作業者管理</h3>
@@ -269,6 +273,10 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
     <label>備考</label>
     <textarea id="notes" placeholder="特記事項があれば入力してください"></textarea>
   </div>
+  <div class="section">
+    <label class="bento-toggle"><input type="checkbox" id="bento">🍱 お弁当を作ってもらった</label>
+    <p class="hint" style="text-align:left;margin-top:6px;">集計用です。LINEの日報には載りません</p>
+  </div>
   <div class="action-row">
     <button class="btn primary" onclick="generateReport()">日報を生成</button>
     <button class="btn clear" onclick="clearForm()">クリア</button>
@@ -307,6 +315,7 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
 <div class="container">
   <button class="btn back" onclick="showPage('topPage')">← トップに戻る</button>
   <h2>現場・作業者管理</h2>
+  <p class="hint" style="text-align:left;margin:-8px 0 16px;">この画面は管理者モードの端末にだけ表示されています。<a href="#" onclick="endAdminMode();return false;" style="color:#e53935;">この端末の管理者モードを解除</a></p>
   <div class="section">
     <label>現場名を追加</label>
     <div class="add-row">
@@ -391,6 +400,9 @@ select { width: 100%; padding: 16px 44px 16px 16px; border: 1px solid #ddd; bord
       <label>備考</label>
       <textarea id="efNotes"></textarea>
     </div>
+    <div class="section">
+      <label class="bento-toggle"><input type="checkbox" id="efBento">🍱 お弁当を作ってもらった</label>
+    </div>
     <div class="out-actions">
       <button class="out-btn main-btn" id="efSaveBtn" onclick="saveEditReport()">修正を保存</button>
       <p class="hint">スプレッドシートとカレンダーの両方が修正されます</p>
@@ -417,7 +429,55 @@ function escHtml(v) {
   return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+/* ---------- 管理者モード ----------
+ * 「現場・作業者管理」は管理者の端末にだけ出す。
+ * URL の最後に ?admin を付けて開き、パスワードを入れるとその端末で有効になる（端末に記憶）。
+ * ※ 画面に出さないだけの仕組み。GAS 側で止めているわけではない。
+ */
+const ADMIN_KEY = 'nippou_admin';
+// パスワードはそのまま書かず、SHA-256 にした値と比べる（ソースを見られても分からないように）
+const ADMIN_PASS_HASH = '4450fd5523ac7f5bd1397074515ca59d42f8c052750c2d44973e5302e031aa0a';
+
+function isAdmin() {
+  try { return localStorage.getItem(ADMIN_KEY) === 'yes'; } catch(e) { return false; }
+}
+
+function applyAdminMode() {
+  document.getElementById('adminCard').style.display = isAdmin() ? '' : 'none';
+}
+
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function checkAdminUrl() {
+  if (!/[?&]admin\b/.test(location.search)) return;
+  // URL から ?admin を消しておく（ホーム画面に追加したときに残らないように）
+  history.replaceState(null, '', location.pathname);
+  if (isAdmin()) { showToast('この端末は管理者モードです', 'green'); return; }
+  const pass = prompt('管理者パスワードを入力してください');
+  if (pass === null) return;
+  if (await sha256Hex(pass) === ADMIN_PASS_HASH) {
+    try { localStorage.setItem(ADMIN_KEY, 'yes'); } catch(e) {}
+    applyAdminMode();
+    showToast('管理者モードにしました', 'green');
+  } else {
+    showToast('パスワードが違います', 'red');
+  }
+}
+
+function endAdminMode() {
+  if (!confirm('この端末の管理者モードを解除しますか？\n「現場・作業者管理」がトップ画面に出なくなります')) return;
+  try { localStorage.removeItem(ADMIN_KEY); } catch(e) {}
+  applyAdminMode();
+  showPage('topPage');
+  showToast('管理者モードを解除しました', 'green');
+}
+
 function showPage(id) {
+  // 管理者モードでない端末からは管理画面を開かせない
+  if (id === 'settingsPage' && !isAdmin()) id = 'topPage';
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
@@ -574,6 +634,7 @@ async function openEditReport() {
   document.getElementById('efParking').value = Number(row.parking) > 0 ? Number(row.parking) : '';
   document.getElementById('efHighway').value = Number(row.highway) > 0 ? Number(row.highway) : '';
   document.getElementById('efNotes').value = row.notes || '';
+  document.getElementById('efBento').checked = !!row.bento;
 
   const btn = document.getElementById('efSaveBtn');
   btn.disabled = false;
@@ -633,7 +694,8 @@ async function saveEditReport() {
     workers: editWorkers.join('、'),
     timeStr: (start && end) ? `${start} 〜 ${end}` : (start ? `${start} 〜` : '―'),
     tasks: tasks.join('\n'),
-    parking, highway, notes
+    parking, highway, notes,
+    bento: document.getElementById('efBento').checked
   };
 
   const btn = document.getElementById('efSaveBtn');
@@ -911,7 +973,7 @@ function generateReport() {
   const btn = document.getElementById('mainBtn');
   btn.textContent = 'コピー ＆ カレンダー登録';
   btn.disabled = false;
-  saveToHistory({ date, dateLabel, site, workers: selectedWorkers, start, end, tasks, parking, highway, notes, report });
+  saveToHistory({ date, dateLabel, site, workers: selectedWorkers, start, end, tasks, parking, highway, notes, report, bento: document.getElementById('bento').checked });
   loadHistory();
   setTimeout(() => { document.getElementById('outputArea').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
 }
@@ -941,7 +1003,9 @@ async function copyAndRegister() {
       tasks: currentReport.tasks,
       parking: currentReport.parking,
       highway: currentReport.highway,
-      notes: currentReport.notes
+      notes: currentReport.notes,
+      // 日報を生成したあとにチェックを変えても効くよう、保存する時点の状態を送る
+      bento: document.getElementById('bento').checked
     });
     if (ok === false) {
       btn.textContent = 'コピー ＆ カレンダー登録';
@@ -985,6 +1049,7 @@ function clearForm() {
   document.getElementById('newSiteInput').value = '';
   onSiteChange();
   ['startTime','endTime','parking','highway','notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('bento').checked = false;
   document.getElementById('taskList').innerHTML = '';
   document.getElementById('outputArea').style.display = 'none';
   selectedWorkers = [];
@@ -1031,6 +1096,7 @@ function loadEntry(i) {
   document.getElementById('parking').value = h.parking || '';
   document.getElementById('highway').value = h.highway || '';
   document.getElementById('notes').value = h.notes || '';
+  document.getElementById('bento').checked = !!h.bento;
   document.getElementById('taskList').innerHTML = '';
   (h.tasks||[]).forEach(t => { addTask(); const rows = document.querySelectorAll('#taskList .task-row textarea'); rows[rows.length-1].value = t; });
   selectedWorkers = h.workers || [];
@@ -1059,6 +1125,8 @@ function loadEntry(i) {
 document.getElementById('reportDate').value = `${yyyy}-${mm}-${dd}`;
 addTask();
 loadHistory();
+applyAdminMode();
+checkAdminUrl();
 </script>
 </body>
 </html>
